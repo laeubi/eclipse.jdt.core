@@ -9,4 +9,4 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    uses: eclipse-platform/eclipse.platform.releng.aggregator/.github/workflows/updateRelease.yml@master
+    uses: laeubi/eclipse.platform.releng.aggregator/.github/workflows/updateRelease.yml@master
