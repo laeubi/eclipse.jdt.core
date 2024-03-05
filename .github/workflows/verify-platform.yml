@@ -73,7 +73,7 @@ jobs:
       with:
         name: comparator-results
         if-no-files-found: ignore
-        retention-days: 5
+        retention-days: 7
         compression-level: 0
         path: |
           ${{ github.workspace }}/**/target/artifactcomparison/*.*
