@@ -65,7 +65,6 @@ jobs:
         -Dcompare-version-with-baselines.skip=false
         -Dcbi-ecj-version=99.99
         -Dtycho.debug.artifactcomparator
-        -Dtycho.baseline=failCommon
         clean verify
     - name: Upload Comparator Results
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
@@ -76,5 +75,5 @@ jobs:
         retention-days: 7
         compression-level: 0
         path: |
-          ${{ github.workspace }}/**/target/artifactcomparison/*.*
+          ${{ github.workspace }}/platform/**/target/artifactcomparison/**/*
 
