@@ -164,6 +164,31 @@ public class MultiReleaseTests extends BuilderTests {
 		expectingNoProblems();
 	}
 
+	public void testMultiReleaseCompileWithDisabledTargetOption() throws JavaModelException, IOException {
+		IPath projectPath = whenSetupMRRpoject();
+		env.setProjectOption(projectPath, "org.eclipse.jdt.core.compiler.release", "disabled");
+		IPath src9 = env.getPackageFragmentRootPath(projectPath, JAVA9_SRC_FOLDER);
+		env.addClass(src9, "p", "NotInThisRelease",
+				"""
+				package p;
+
+				import java.net.MalformedURLException;
+				import java.net.URI;
+				import java.net.URISyntaxException;
+				import java.net.URL;
+
+				public class NotInThisRelease {
+					public URL create() throws MalformedURLException, URISyntaxException {
+						// Only Java 20+ --> must fail!
+						return URL.of(new URI("http://foo.org"), null);
+					}
+				}
+				"""
+		);
+		fullBuild();
+		expectingOnlySpecificProblemFor(src9, new Problem("", "The method of(URI, null) is undefined for the type URL", src9.append("p/NotInThisRelease.java"), 281, 283, 50, IMarker.SEVERITY_ERROR, "JDT"));
+	}
+
 	public void testMultiReleaseCompileWithConflict() throws JavaModelException, IOException {
 		IPath projectPath = whenSetupMRRpoject();
 		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {

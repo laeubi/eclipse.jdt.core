@@ -438,11 +438,17 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 				.collect(Collectors.groupingBy(sf -> sf.sourceLocation.release, TreeMap::new, Collectors.toList()));
 		for (Entry<Integer, List<SourceFile>> entry : collect.entrySet()) {
 			long oldTarget = this.compiler.options.targetJDK;
+			long oldCompliance = this.compiler.options.complianceLevel;
+			long oldSource = this.compiler.options.sourceLevel;
+			boolean oldRelease = this.compiler.options.release;
 			try {
 				int release = entry.getKey();
 				if (release >= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
 					long currentTarget = CompilerOptions.releaseToJDKLevel(release);
 					this.compiler.options.targetJDK = currentTarget;
+					this.compiler.options.complianceLevel = currentTarget;
+					this.compiler.options.sourceLevel = currentTarget;
+					this.compiler.options.release = true;
 					if (oldTarget >= currentTarget) {
 						List<IContainer> list = entry.getValue().stream().map(sf -> sf.sourceLocation.sourceFolder)
 								.distinct().toList();
@@ -460,6 +466,9 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 				this.compiler.compile(sourceFiles);
 			} finally {
 				this.compiler.options.targetJDK = oldTarget;
+				this.compiler.options.complianceLevel = oldCompliance;
+				this.compiler.options.sourceLevel = oldSource;
+				this.compiler.options.release = oldRelease;
 			}
 		}
 	} catch (AbortCompilation ignored) {
