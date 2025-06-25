@@ -34,6 +34,7 @@ import org.eclipse.jdt.internal.compiler.classfmt.ExternalAnnotationProvider;
 import org.eclipse.jdt.internal.compiler.env.AccessRuleSet;
 import org.eclipse.jdt.internal.compiler.env.IBinaryType;
 import org.eclipse.jdt.internal.compiler.env.IModule;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.util.SuffixConstants;
 import org.eclipse.jdt.internal.core.JavaModelManager;
@@ -156,7 +157,7 @@ public boolean equals(Object o) {
 	return this.binaryFolder.equals(dir.binaryFolder) && areAllModuleOptionsEqual(dir);
 }
 @Override
-public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
 	if (!doesFileExist(binaryFileName, qualifiedPackageName, qualifiedBinaryFileName)) return null; // most common case
 
 	IBinaryType reader = null;
@@ -257,7 +258,7 @@ public String debugPathString() {
 @Override
 public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName) {
 	//
-	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null);
+	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null, IReleaseAwareNameEnvironment.NO_RELEASE);
 }
 
 @Override

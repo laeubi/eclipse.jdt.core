@@ -55,7 +55,7 @@ public class ClasspathJMod extends ClasspathJar {
 
 	@Override
 	public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-											boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+											boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
 		if (!isPackage(qualifiedPackageName, moduleName)) return null; // most common case
 		if (moduleNameFilter != null && this.module != null && !moduleNameFilter.test(String.valueOf(this.module.name())))
 			return null;

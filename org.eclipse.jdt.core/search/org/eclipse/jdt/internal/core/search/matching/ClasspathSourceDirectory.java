@@ -109,7 +109,8 @@ public boolean equals(Object o) {
 }
 
 @Override
-public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
+	// a source directory can't support different release, so it is ignored here? Or can we?
 	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName);
 }
 @Override

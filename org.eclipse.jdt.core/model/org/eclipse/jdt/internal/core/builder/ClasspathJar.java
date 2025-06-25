@@ -49,6 +49,7 @@ import org.eclipse.jdt.internal.compiler.classfmt.ExternalAnnotationProvider;
 import org.eclipse.jdt.internal.compiler.env.AccessRuleSet;
 import org.eclipse.jdt.internal.compiler.env.IBinaryType;
 import org.eclipse.jdt.internal.compiler.env.IModule;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.lookup.TypeConstants;
 import org.eclipse.jdt.internal.compiler.util.SuffixConstants;
@@ -229,7 +230,7 @@ public boolean equals(Object o) {
 }
 
 @Override
-public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
 	if (!isPackage(qualifiedPackageName, moduleName)) return null; // most common case
 
 	try {
@@ -356,7 +357,7 @@ public IModule getModule() {
 @Override
 public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName) {
 	//
-	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null);
+	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null, IReleaseAwareNameEnvironment.NO_RELEASE);
 }
 public Manifest getManifest() {
 	if (!readKnownPackageNames()) // ensure zipFile is initialized

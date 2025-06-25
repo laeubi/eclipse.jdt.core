@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader;
@@ -36,6 +37,7 @@ import org.eclipse.jdt.internal.compiler.env.IBinaryType;
 import org.eclipse.jdt.internal.compiler.env.IModule;
 import org.eclipse.jdt.internal.compiler.env.IModule.IModuleReference;
 import org.eclipse.jdt.internal.compiler.env.IMultiModuleEntry;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.util.JRTUtil;
 import org.eclipse.jdt.internal.compiler.util.JRTUtil.JrtFileVisitor;
@@ -149,9 +151,19 @@ public boolean equals(Object o) {
 
 @Override
 public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-										boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+										boolean asBinaryOnly, Predicate<String> moduleNameFilter,int releaseNumber) {
 	if (!isPackage(qualifiedPackageName, moduleName)) {
 		return null; // most common case
+	}
+	//TODO TEMP properly merge with ClasspathJrtWithReleaseOption
+	if (releaseNumber>= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
+		try {
+			 ClasspathJrtWithReleaseOption withReleaseOption = new ClasspathJrtWithReleaseOption(this.zipFilename, this.accessRuleSet,  this.externalAnnotationPath ==null?null:IPath.fromOSString(this.externalAnnotationPath), Integer.toString(releaseNumber));
+			 return withReleaseOption.findClass(binaryFileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter, releaseNumber);
+		} catch (CoreException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	try {
@@ -203,9 +215,9 @@ public String debugPathString() {
 }
 @Override
 public NameEnvironmentAnswer findClass(char[] typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-		boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+		boolean asBinaryOnly, Predicate<String> moduleNameFilter,int releaseNumber) {
 	String fileName = new String(typeName);
-	return findClass(fileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter);
+	return findClass(fileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter,releaseNumber);
 }
 @Override
 public boolean hasModule() {
@@ -271,7 +283,7 @@ protected void addRequired(String mod, Set<String> allModules) {
 @Override
 public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName) {
 	//
-	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null);
+	return findClass(typeName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, false, null,IReleaseAwareNameEnvironment.NO_RELEASE);
 }
 /** TEST ONLY */
 public static void resetCaches() {

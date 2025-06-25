@@ -35,6 +35,7 @@ import org.eclipse.jdt.internal.compiler.classfmt.ClassFormatException;
 import org.eclipse.jdt.internal.compiler.env.AccessRuleSet;
 import org.eclipse.jdt.internal.compiler.env.IBinaryType;
 import org.eclipse.jdt.internal.compiler.env.IModule;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.util.CtSym;
 import org.eclipse.jdt.internal.compiler.util.JRTUtil;
@@ -160,11 +161,11 @@ public class ClasspathJrtWithReleaseOption extends ClasspathJrt {
 
 	@Override
 	public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName,
-			String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+			String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter,int releaseNumber) {
 
 		if (this.fs == null) {
 			return super.findClass(binaryFileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName,
-					asBinaryOnly, moduleNameFilter);
+					asBinaryOnly, moduleNameFilter, IReleaseAwareNameEnvironment.NO_RELEASE);
 		}
 		if (!isPackage(qualifiedPackageName, moduleName)) {
 			return null; // most common case

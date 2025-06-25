@@ -42,6 +42,7 @@ import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
 import org.eclipse.jdt.internal.compiler.env.IModule;
 import org.eclipse.jdt.internal.compiler.env.IModuleAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.NameEnvironmentAnswer;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.util.SuffixConstants;
@@ -378,7 +379,9 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 					moduleName,
 					qSourceFileName,  // doesn't include the file extension
 					false,
-					null /*no module filtering on source dir*/);
+					null /*no module filtering on source dir*/,
+					IReleaseAwareNameEnvironment.NO_RELEASE /* TODO pass the release from the project of the workingcopy?*/
+					);
 			}
 		} else {
 			if (binaryFileName == null) {
@@ -395,7 +398,8 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 					moduleName,
 					qBinaryFileName,
 					false,
-					this.moduleLocations != null ? this.moduleLocations::containsKey : null);
+					this.moduleLocations != null ? this.moduleLocations::containsKey : null,
+					IReleaseAwareNameEnvironment.NO_RELEASE /* TODO pass the release from the project of the workingcopy?*/);
 		}
 		if (answer != null) {
 			if (!answer.ignoreIfBetter()) {

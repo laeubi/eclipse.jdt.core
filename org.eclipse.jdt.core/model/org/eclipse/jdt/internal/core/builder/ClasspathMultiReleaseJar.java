@@ -74,6 +74,7 @@ public class ClasspathMultiReleaseJar extends ClasspathJar {
 	}
 
 	private static String[] initializeVersions(ZipFile zipFile, String compliance) {
+		//FIXME must actually check somewhere if MUlti-Release flag is set in manifest!
 		int earliestJavaVersion = ClassFileConstants.MAJOR_VERSION_9;
 		long latestJDK = CompilerOptions.versionToJdkLevel(compliance);
 		int latestJavaVer = (int) (latestJDK >> 16);
@@ -115,10 +116,11 @@ public class ClasspathMultiReleaseJar extends ClasspathJar {
 
 	@Override
 	public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName,
-			String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+			String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
 		if (!isPackage(qualifiedPackageName, moduleName)) {
 			return null; // most common case
 		}
+		//FIXME compliance/release must be a parameter here!
 		for (String path : supportedVersions(this.zipFile)) {
 			String s = null;
 			try {
@@ -147,7 +149,7 @@ public class ClasspathMultiReleaseJar extends ClasspathJar {
 			}
 		}
 		return super.findClass(binaryFileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly,
-				moduleNameFilter);
+				moduleNameFilter, release);
 	}
 
 }

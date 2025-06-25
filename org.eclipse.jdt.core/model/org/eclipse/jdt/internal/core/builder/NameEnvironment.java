@@ -583,7 +583,7 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 			relevantLocations = ((ModulePathEntry) modulePathEntry).getClasspathLocations();
 		} else if (modulePathEntry instanceof ClasspathLocation) {
 			return ((ClasspathLocation) modulePathEntry).findClass(typeName, qPackageName, moduleName, qBinaryFileName, false,
-																	null/*module already checked*/);
+																	null/*module already checked*/, release);
 		} else {
 			return null;
 		}
@@ -592,6 +592,7 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 	}
 	NameEnvironmentAnswer suggestedAnswer = null;
 	if (release >= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
+		//TODO this is possibly better handled in the ClasspathLocation now!
 		//we must filter and sort any classpath directory here:
 		//release locations that do not match (e.g larger than current release) must be omitted)
 		//and we need to sort by highest to lowest to have the same order like on runtime.
@@ -613,7 +614,7 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 			continue;
 		}
 		NameEnvironmentAnswer answer = classpathLocation.findClass(binaryFileName, qPackageName, moduleName, qBinaryFileName, false,
-																	this.modulePathEntries != null ? this.modulePathEntries::containsKey : null);
+																	this.modulePathEntries != null ? this.modulePathEntries::containsKey : null, release);
 		if (answer != null) {
 			char[] answerMod = answer.moduleName();
 			if (answerMod != null && this.modulePathEntries != null) {

@@ -185,8 +185,29 @@ public class MultiReleaseTests extends BuilderTests {
 				}
 				"""
 		);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_21) };
+		IPath src21 = env.addPackageFragmentRoot(projectPath, "src11", extraAttributes);
+		env.addClass(src21, "p", "ButInThisRelease",
+				"""
+				package p;
+
+				import java.net.MalformedURLException;
+				import java.net.URI;
+				import java.net.URISyntaxException;
+				import java.net.URL;
+
+				public class ButInThisRelease {
+					public URL create() throws MalformedURLException, URISyntaxException {
+						// For Java 21 it will work!
+						return URL.of(new URI("http://foo.org"), null);
+					}
+				}
+				"""
+		);
 		fullBuild();
 		expectingOnlySpecificProblemFor(src9, new Problem("", "The method of(URI, null) is undefined for the type URL", src9.append("p/NotInThisRelease.java"), 281, 283, 50, IMarker.SEVERITY_ERROR, "JDT"));
+		expectingNoProblemsFor(src21);
 	}
 
 	public void testMultiReleaseCompileWithConflict() throws JavaModelException, IOException {

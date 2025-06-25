@@ -61,7 +61,7 @@ public abstract class ClasspathLocation {
 	// In the following signatures, passing a null moduleName signals "don't care":
 	abstract public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName);
 	abstract public NameEnvironmentAnswer findClass(String typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-													boolean asBinaryOnly, Predicate<String> moduleNameFilter);
+													boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release);
 	abstract public boolean isPackage(String qualifiedPackageName, String moduleName);
 	public char[][] getModulesDeclaringPackage(String qualifiedPackageName, String moduleName) {
 		return singletonModuleNameIf(isPackage(qualifiedPackageName, moduleName));
@@ -70,9 +70,9 @@ public abstract class ClasspathLocation {
 	abstract public boolean hasCompilationUnit(String pkgName, String moduleName);
 
 	public NameEnvironmentAnswer findClass(char[] typeName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-											boolean asBinaryOnly, Predicate<String> moduleNameFilter) {
+											boolean asBinaryOnly, Predicate<String> moduleNameFilter, int release) {
 		String fileName = new String(typeName);
-		return findClass(fileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter);
+		return findClass(fileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter, release);
 	}
 	public void setModule (IModule mod) {
 		this.module = mod;
