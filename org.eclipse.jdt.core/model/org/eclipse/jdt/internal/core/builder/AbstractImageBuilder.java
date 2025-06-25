@@ -159,7 +159,7 @@ public void acceptResult(CompilationResult result) {
 	// & additional types and report problems.
 
 	// In Incremental mode, when writing out a class file we need to compare it
-	// against the previous file, remembering if structural changes occured.
+	// against the previous file, remembering if structural changes occurred.
 	// Before reporting the new problems, we need to update the problem count &
 	// remove the old problems. Plus delete additional class files that no longer exist.
 

@@ -27,7 +27,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader;
@@ -52,6 +51,7 @@ protected final static Map<String, Map<String, IModule>> modulesCache = new Conc
 protected final String zipFilename; // keep for equals
 protected final JrtFileSystem jrtFileSystem;
 static final Set<String> NO_LIMIT_MODULES = Collections.emptySet();
+private Map<Integer, JrtReleaseClasses> releaseClasses = new ConcurrentHashMap<>();
 
 protected ClasspathJrt(String zipFilename) {
 	this.zipFilename = Objects.requireNonNull(zipFilename);
@@ -97,7 +97,7 @@ public static void loadModules(final ClasspathJrt jrt) {
 			JRTUtil.walkModuleImage(jrt.jrtFileSystem, new JrtFileVisitor<Path>() {
 				@Override
 				public FileVisitResult visitModule(Path path, String name) throws IOException {
-					jrt.acceptModule(JRTUtil.getClassfileContent(jrt.jrtFileSystem, IModule.MODULE_INFO_CLASS, name), name,	newCache);
+					acceptModule(jrtKey, JRTUtil.getClassfileContent(jrt.jrtFileSystem, IModule.MODULE_INFO_CLASS, name), name,	newCache);
 					return FileVisitResult.SKIP_SUBTREE;
 				}
 			}, JRTUtil.NOTIFY_MODULES);
@@ -112,7 +112,7 @@ protected String getKey() {
 	return this.zipFilename;
 }
 
-void acceptModule(byte[] content, String name, Map<String, IModule> cache) {
+static void acceptModule(String info, byte[] content, String name, Map<String, IModule> cache) {
 	if (content == null) {
 		return;
 	}
@@ -123,7 +123,7 @@ void acceptModule(byte[] content, String name, Map<String, IModule> cache) {
 			cache.put(name, moduleDecl);
 		}
 	} catch (ClassFormatException e) {
-		Util.log(e, "Failed to read module-info.class for " + name + " in " + this.toString()); //$NON-NLS-1$ //$NON-NLS-2$
+		Util.log(e, "Failed to read module-info.class for " + name + " in " + info); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 }
 
@@ -136,6 +136,7 @@ public void cleanup() {
 		}
 		this.annotationZipFile = null;
 	}
+	this.releaseClasses.clear();
 }
 
 @Override
@@ -150,23 +151,32 @@ public boolean equals(Object o) {
 }
 
 @Override
-public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName, String qualifiedBinaryFileName,
-										boolean asBinaryOnly, Predicate<String> moduleNameFilter,int releaseNumber) {
+public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPackageName, String moduleName,
+		String qualifiedBinaryFileName, boolean asBinaryOnly, Predicate<String> moduleNameFilter, int releaseNumber) {
 	if (!isPackage(qualifiedPackageName, moduleName)) {
 		return null; // most common case
 	}
-	//TODO TEMP properly merge with ClasspathJrtWithReleaseOption
-	if (releaseNumber>= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
-		try {
-			 ClasspathJrtWithReleaseOption withReleaseOption = new ClasspathJrtWithReleaseOption(this.zipFilename, this.accessRuleSet,  this.externalAnnotationPath ==null?null:IPath.fromOSString(this.externalAnnotationPath), Integer.toString(releaseNumber));
-			 return withReleaseOption.findClass(binaryFileName, qualifiedPackageName, moduleName, qualifiedBinaryFileName, asBinaryOnly, moduleNameFilter, releaseNumber);
-		} catch (CoreException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
 	try {
+		if (releaseNumber > IReleaseAwareNameEnvironment.NO_RELEASE) {
+			try {
+				return getJrtRelease(releaseNumber)
+						.loadType(qualifiedBinaryFileName, moduleName, moduleNameFilter);
+			} catch (IOException e) {
+				return null;
+			}
+		}
+		return loadDefaultType(qualifiedBinaryFileName, moduleName, moduleNameFilter);
+	} catch (ClassFormatException | IOException e) { // treat as if class file is missing
+		return null;
+	}
+}
+
+JrtReleaseClasses getJrtRelease(int releaseNumber) {
+	return this.releaseClasses.computeIfAbsent(releaseNumber, r -> new JrtReleaseClasses(this, r));
+}
+
+NameEnvironmentAnswer loadDefaultType(String qualifiedBinaryFileName, String moduleName,
+		Predicate<String> moduleNameFilter) throws IOException, ClassFormatException {
 		String fileNameWithoutExtension = qualifiedBinaryFileName.substring(0, qualifiedBinaryFileName.length() - SuffixConstants.SUFFIX_CLASS.length);
 		if (this.jrtFileSystem == null) {
 			return null;
@@ -176,9 +186,6 @@ public NameEnvironmentAnswer findClass(String binaryFileName, String qualifiedPa
 			return null;
 		}
 		return createAnswer(fileNameWithoutExtension, reader, reader.getModule());
-	} catch (ClassFormatException | IOException e) { // treat as if class file is missing
-		return null;
-	}
 }
 @Override
 public IPath getProjectRelativePath() {

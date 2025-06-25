@@ -451,7 +451,10 @@ public class CtSym {
 	 * @return the "code" used by ct.sym for given Java version
 	 */
 	public static String getReleaseCode(String release) {
-		int numericVersion = Integer.parseInt(release);
+		return getReleaseCode(Integer.parseInt(release));
+	}
+
+	public static String getReleaseCode(int numericVersion) {
 		if(numericVersion < 10) {
 			return String.valueOf(numericVersion);
 		}
