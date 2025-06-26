@@ -8365,8 +8365,7 @@ public class ModuleBuilderTests extends ModifyingResourceTests {
 			waitForAutoBuild();
 			IMarker[] markers = p.getProject().findMarkers(null, true, IResource.DEPTH_INFINITE);
 			assertMarkers("Unexpected markers",
-					"The project was not built due to \"release 6 is not found in the system\". "
-					+ "Fix the problem, then try refreshing this project and building it since it may be inconsistent",  markers);
+					"Compiling for Java version '1.6' is no longer supported. Minimal supported version is '1.8'",  markers);
 
 		} finally {
 			JavaCore.setOptions(options);
