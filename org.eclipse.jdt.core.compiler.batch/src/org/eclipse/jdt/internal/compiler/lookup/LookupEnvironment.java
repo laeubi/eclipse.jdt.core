@@ -1215,9 +1215,11 @@ private NameEnvironmentAnswer findType(IModuleAwareNameEnvironment moduleEnv, ch
 }
 
 private int getRelease() {
-	int release = (int) (this.globalOptions.targetJDK >> 16) - ClassFileConstants.MAJOR_VERSION_0;
-	if (release >= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
-		return release;
+	if (this.globalOptions.release) {
+		int release = (int) (this.globalOptions.targetJDK >> 16) - ClassFileConstants.MAJOR_VERSION_0;
+		if (release >= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
+			return release;
+		}
 	}
 	return IReleaseAwareNameEnvironment.NO_RELEASE;
 }
