@@ -274,7 +274,7 @@ public ReferenceBinding askForType(char[][] compoundName, /*@NonNull*/ModuleBind
 	if (this.useModuleSystem) {
 		IModuleAwareNameEnvironment moduleEnv = (IModuleAwareNameEnvironment) this.nameEnvironment;
 		answers = askForTypeFromModules(clientModule, clientModule.getAllRequiredModules(),
-				mod -> moduleEnv.findType(compoundName, mod.nameForLookup()));
+				mod -> findType(compoundName, moduleEnv, mod.nameForLookup()));
 	} else {
 		NameEnvironmentAnswer answer = findType(compoundName);
 		if (answer != null) {
@@ -446,23 +446,24 @@ private NameEnvironmentAnswer[] askForTypeFromModules(ModuleBinding clientModule
 	}
 }
 /** First check for a known type in a split package and otherwise ask the oracle. */
-private static NameEnvironmentAnswer fromSplitPackageOrOracle(IModuleAwareNameEnvironment moduleEnv, ModuleBinding module,
+private NameEnvironmentAnswer fromSplitPackageOrOracle(IModuleAwareNameEnvironment moduleEnv, ModuleBinding moduleBinding,
 		PackageBinding packageBinding, char[] name)
 {
 	if (packageBinding instanceof SplitPackageBinding) {
 		// when asking a split package getType0() we may have answered null in case of ambiguity (not knowing the module context).
 		// now check if the module-incarnation of the package has the type:
 		// (needed because the moduleEnv will not answer initial types).
-		ReferenceBinding binding = ((SplitPackageBinding) packageBinding).getType0ForModule(module, name);
+		ReferenceBinding binding = ((SplitPackageBinding) packageBinding).getType0ForModule(moduleBinding, name);
 		if (binding != null && binding.isValidBinding()) {
 			if (binding instanceof UnresolvedReferenceBinding)
-				binding = ((UnresolvedReferenceBinding) binding).resolve(module.environment, false);
+				binding = ((UnresolvedReferenceBinding) binding).resolve(moduleBinding.environment, false);
 			if (binding.isValidBinding())
-				return new NameEnvironmentAnswer(binding, module);
+				return new NameEnvironmentAnswer(binding, moduleBinding);
 		}
 	}
-	return moduleEnv.findType(name, packageBinding.compoundName, module.nameForLookup());
+	return findType(moduleEnv, name, moduleBinding.nameForLookup(), packageBinding.compoundName);
 }
+
 private ModuleBinding getModuleFromAnswer(NameEnvironmentAnswer answer) {
 	char[] moduleName = answer.moduleName();
 	if (moduleName != null) {
@@ -1195,6 +1196,22 @@ private NameEnvironmentAnswer findType(char[][] typeName) {
 		return releaseAware.findType(typeName, getRelease());
 	}
 	return this.nameEnvironment.findType(typeName);
+}
+
+private NameEnvironmentAnswer findType(char[][] compoundName, IModuleAwareNameEnvironment moduleEnv,
+		char[] nameForLookup) {
+	if (moduleEnv instanceof IReleaseAwareNameEnvironment releaseAware) {
+		return releaseAware.findType(compoundName, nameForLookup, getRelease());
+	}
+	return moduleEnv.findType(compoundName, nameForLookup);
+}
+
+private NameEnvironmentAnswer findType(IModuleAwareNameEnvironment moduleEnv, char[] name, char[] nameForLookup,
+		char[][] compoundName) {
+	if (moduleEnv instanceof IReleaseAwareNameEnvironment releaseAware) {
+		return releaseAware.findType(name, compoundName, nameForLookup, getRelease());
+	}
+	return moduleEnv.findType(name, compoundName, nameForLookup);
 }
 
 private int getRelease() {
