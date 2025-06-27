@@ -75,6 +75,15 @@ public class ModuleUtil {
 		}
 
 		@Override
+		public NameEnvironmentAnswer findType(char[][] compoundTypeName, char[] moduleName, int release) {
+			NameEnvironmentAnswer answer = super.findType(compoundTypeName, moduleName, release);
+			if (answer != null && answer.moduleName() != null) {
+				this.modules.add(String.valueOf(answer.moduleName()));
+			}
+			return answer;
+		}
+
+		@Override
 		public NameEnvironmentAnswer findType(char[] typeName, char[][] packageName, char[] moduleName) {
 			NameEnvironmentAnswer answer = super.findType(typeName, packageName, moduleName);
 			if (answer != null && answer.moduleName() != null) {
@@ -82,6 +91,16 @@ public class ModuleUtil {
 			}
 			return answer;
 		}
+
+		@Override
+		public NameEnvironmentAnswer findType(char[] typeName, char[][] packageName, char[] moduleName, int release) {
+			NameEnvironmentAnswer answer = super.findType(typeName, packageName, moduleName, release);
+			if (answer != null && answer.moduleName() != null) {
+				this.modules.add(String.valueOf(answer.moduleName()));
+			}
+			return answer;
+		}
+
 	}
 	private static Compiler newCompiler(ModuleAccumulatorEnvironment environment, IJavaProject javaProject) {
 		Map<String, String> projectOptions = javaProject.getOptions(true);

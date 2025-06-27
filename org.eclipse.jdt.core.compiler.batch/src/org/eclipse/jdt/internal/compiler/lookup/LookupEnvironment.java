@@ -274,7 +274,7 @@ public ReferenceBinding askForType(char[][] compoundName, /*@NonNull*/ModuleBind
 	if (this.useModuleSystem) {
 		IModuleAwareNameEnvironment moduleEnv = (IModuleAwareNameEnvironment) this.nameEnvironment;
 		answers = askForTypeFromModules(clientModule, clientModule.getAllRequiredModules(),
-				mod -> findType(compoundName, moduleEnv, mod.nameForLookup()));
+				mod -> findType(compoundName, moduleEnv, mod));
 	} else {
 		NameEnvironmentAnswer answer = findType(compoundName);
 		if (answer != null) {
@@ -461,7 +461,7 @@ private NameEnvironmentAnswer fromSplitPackageOrOracle(IModuleAwareNameEnvironme
 				return new NameEnvironmentAnswer(binding, moduleBinding);
 		}
 	}
-	return findType(moduleEnv, name, moduleBinding.nameForLookup(), packageBinding.compoundName);
+	return findType(moduleEnv, name, moduleBinding, packageBinding);
 }
 
 private ModuleBinding getModuleFromAnswer(NameEnvironmentAnswer answer) {
@@ -1199,19 +1199,21 @@ private NameEnvironmentAnswer findType(char[][] typeName) {
 }
 
 private NameEnvironmentAnswer findType(char[][] compoundName, IModuleAwareNameEnvironment moduleEnv,
-		char[] nameForLookup) {
+		ModuleBinding moduleBinding) {
+	char[] moduleName = moduleBinding.nameForLookup();
 	if (moduleEnv instanceof IReleaseAwareNameEnvironment releaseAware) {
-		return releaseAware.findType(compoundName, nameForLookup, getRelease());
+		return releaseAware.findType(compoundName, moduleName, getRelease());
 	}
-	return moduleEnv.findType(compoundName, nameForLookup);
+	return moduleEnv.findType(compoundName, moduleName);
 }
 
-private NameEnvironmentAnswer findType(IModuleAwareNameEnvironment moduleEnv, char[] name, char[] nameForLookup,
-		char[][] compoundName) {
+private NameEnvironmentAnswer findType(IModuleAwareNameEnvironment moduleEnv, char[] typeName, ModuleBinding moduleBinding, PackageBinding packageBinding) {
+	char[] moduleName = moduleBinding.nameForLookup();
+	char[][] packageName = packageBinding.compoundName;
 	if (moduleEnv instanceof IReleaseAwareNameEnvironment releaseAware) {
-		return releaseAware.findType(name, compoundName, nameForLookup, getRelease());
+		return releaseAware.findType(typeName, packageName, moduleName, getRelease());
 	}
-	return moduleEnv.findType(name, compoundName, nameForLookup);
+	return moduleEnv.findType(typeName, packageName, moduleName);
 }
 
 private int getRelease() {
