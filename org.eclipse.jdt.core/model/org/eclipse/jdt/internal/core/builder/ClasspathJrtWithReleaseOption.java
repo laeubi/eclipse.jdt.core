@@ -96,11 +96,19 @@ public class ClasspathJrtWithReleaseOption extends ClasspathJrt {
 
 	@Override
 	public boolean hasModule() {
+		if (this.jrtRelease == null) {
+			return super.hasModule();
+		}
 		return this.jrtRelease.hasModule();
 	}
 
 	@Override
 	protected String getKey() {
+		if (this.jrtRelease == null) {
+			//FIXME why should this happen?!?
+			// org.eclipse.jdt.core.tests.model.ModuleBuilderTests.testReleaseOption2 fails without this check --> load modules lazy?
+			return super.getKey();
+		}
 		return this.jrtRelease.getKey();
 	}
 

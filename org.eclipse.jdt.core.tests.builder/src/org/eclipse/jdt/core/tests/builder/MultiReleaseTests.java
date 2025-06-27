@@ -253,18 +253,56 @@ public class MultiReleaseTests extends BuilderTests {
 
 	}
 
+	public void testMultiReleaseWithModularProjectAndReleaseEnabled() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_9);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_11) };
+		IPath release11Src = env.addPackageFragmentRoot(projectPath, "src11", extraAttributes);
+		env.addClass(release11Src, "p", "MultiReleaseType",
+				"""
+				package p;
+
+				import java.net.http.HttpClient;
+
+				public class MultiReleaseType {
+					public String print() {
+						HttpClient.newBuilder().build();
+						return "Hello From Release 11";
+					}
+				}
+				"""
+		);
+		fullBuild();
+		expectingNoProblems();
+	}
+
 	private IPath whenSetupMRRpoject() throws JavaModelException {
 		return whenSetupMRRpoject(CompilerOptions.VERSION_1_8);
 	}
 
 	private IPath whenSetupMRRpoject(String compliance) throws JavaModelException {
+		IPath projectPath = createMRProject(compliance);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
+		env.addClass(release9Src, "p", "MultiReleaseType",
+				"""
+				package p;
+				public class MultiReleaseType {
+					public String print() {
+						return "Hello From Release 9";
+					}
+				}
+				"""
+		);
+		return projectPath;
+	}
+
+	protected IPath createMRProject(String compliance) throws JavaModelException {
 		IPath projectPath = env.addProject("P", compliance);
 		env.removePackageFragmentRoot(projectPath, "");
 		env.setProjectOption(projectPath, "org.eclipse.jdt.core.compiler.release", "enabled");
 		IPath defaultSrc = env.addPackageFragmentRoot(projectPath, DEFAULT_SRC_FOLDER);
-		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
-				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
-		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
 		env.setOutputFolder(projectPath, "bin");
 		env.addExternalJars(projectPath, Util.getJavaClassLibs());
 		env.addClass(defaultSrc, "p", "MultiReleaseType",
@@ -276,17 +314,7 @@ public class MultiReleaseTests extends BuilderTests {
 					}
 				}
 				"""
-		);
-		env.addClass(release9Src, "p", "MultiReleaseType",
-				"""
-				package p;
-				public class MultiReleaseType {
-					public String print() {
-						return "Hello From Release 9";
-					}
-				}
-				"""
-		);
+				);
 		return projectPath;
 	}
 
