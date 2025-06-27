@@ -30,6 +30,7 @@ import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceProxy;
 import org.eclipse.core.resources.IResourceProxyVisitor;
@@ -432,6 +433,7 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 			additionalUnits[length + i] = iterator.next();
 	}
 	this.notifier.checkCancel();
+	boolean warnAboutMissingReleaseFlag = false;
 	try {
 		this.inCompiler = true;
 		Map<Integer, List<SourceFile>> collect = Arrays.stream(units)
@@ -459,6 +461,18 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 													release, CompilerOptions.versionFromJdkLevel(oldTarget) }),
 									JavaCore.ERROR);
 						}
+					}
+					if (!oldRelease && !warnAboutMissingReleaseFlag) {
+							for (SourceFile source : entry.getValue()) {
+								IProject project = source.sourceLocation.sourceFolder.getProject();
+								createProblemFor(project, null,
+										NLS.bind(Messages.AbstractImageBuilder_target_required,
+												new Object[] { project.getProjectRelativePath().toPortableString(),
+														release, CompilerOptions.versionFromJdkLevel(oldTarget) }),
+										JavaCore.ERROR);
+								warnAboutMissingReleaseFlag = true;
+								break;
+							}
 					}
 				}
 				SourceFile[] sourceFiles = entry.getValue().toArray(SourceFile[]::new);
