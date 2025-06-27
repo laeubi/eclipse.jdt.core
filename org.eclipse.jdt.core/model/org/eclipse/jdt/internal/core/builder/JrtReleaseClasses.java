@@ -50,36 +50,46 @@ class JrtReleaseClasses {
 	private FileSystem fs;
 	private Path releasePath;
 	private String modPathString;
+	private IOException initError;
 
 	JrtReleaseClasses(ClasspathJrt jrt, int release) {
 		this.jrt = jrt;
 		this.release = release;
 		this.releaseCode = CtSym.getReleaseCode(release);
-	}
-
-	NameEnvironmentAnswer loadType(String qualifiedBinaryFileName, String moduleName, Predicate<String> moduleNameFilter) throws IOException, ClassFormatException {
-		if (this.ctSym == null) {
+		try {
+			//TODO this should happen lazy (as well as loading the modules!
 			this.ctSym = JRTUtil.getCtSym(Path.of(this.jrt.zipFilename).getParent().getParent());
 			this.fs = this.ctSym.getFs();
 			this.releasePath = this.ctSym.getRoot();
 			Path modPath = this.fs.getPath(this.releaseCode + (this.ctSym.isJRE12Plus() ? "" : "-modules")); //$NON-NLS-1$ //$NON-NLS-2$
-			this.modPathString = !Files.exists(modPath) ? null: (this.jrt.zipFilename + "|"+ modPath.toString()); //$NON-NLS-1$
+			this.modPathString = !Files.exists(modPath) ? null : (this.jrt.zipFilename + "|" + modPath.toString()); //$NON-NLS-1$
 			if (!Files.exists(this.releasePath.resolve(this.releaseCode))) {
 				throw new IOException(String.format("release %d is not found in the system", this.release)); //$NON-NLS-1$
 			}
 			if (Files.exists(this.fs.getPath(this.releaseCode, "system-modules"))) { //$NON-NLS-1$
-				this.fs = null;  // Fallback to default version, all classes are on jrt fs, not here.
+				this.fs = null; // Fallback to default version, all classes are on jrt fs, not here.
 			}
-			loadModules();
+		} catch (IOException e) {
+			// can't load it!
+			this.fs = null;
+			this.initError = e;
 		}
+		loadModules();
+	}
+
+	NameEnvironmentAnswer loadType(String qualifiedBinaryFileName, String moduleName,
+			Predicate<String> moduleNameFilter) throws IOException, ClassFormatException {
 		if (this.fs == null) {
+			if (this.initError != null) {
+				throw this.initError;
+			}
 			return this.jrt.loadDefaultType(qualifiedBinaryFileName, moduleName, moduleNameFilter);
 		}
 		List<Path> releaseRoots = this.ctSym.releaseRoots(this.releaseCode);
 		IBinaryType reader = null;
 		byte[] content = null;
 		String fileNameWithoutExtension = qualifiedBinaryFileName.substring(0,
-											qualifiedBinaryFileName.length() - SuffixConstants.SUFFIX_CLASS.length);
+				qualifiedBinaryFileName.length() - SuffixConstants.SUFFIX_CLASS.length);
 		if (!releaseRoots.isEmpty()) {
 			qualifiedBinaryFileName = qualifiedBinaryFileName.replace(".class", ".sig"); //$NON-NLS-1$ //$NON-NLS-2$
 			Path fullPath = this.ctSym.getFullPath(this.releaseCode, qualifiedBinaryFileName, moduleName);
@@ -105,7 +115,8 @@ class JrtReleaseClasses {
 			if (this.jrt.jrtFileSystem == null) {
 				return null;
 			}
-			reader = JRTUtil.getClassfile(this.jrt.jrtFileSystem, qualifiedBinaryFileName, moduleName, moduleNameFilter);
+			reader = JRTUtil.getClassfile(this.jrt.jrtFileSystem, qualifiedBinaryFileName, moduleName,
+					moduleNameFilter);
 		}
 		if (reader == null) {
 			return null;
@@ -128,7 +139,7 @@ class JrtReleaseClasses {
 				try {
 					Files.walkFileTree(root, Collections.emptySet(), 2, new SimpleFileVisitor<Path>() {
 						@Override
-						public FileVisitResult visitFile(Path f, BasicFileAttributes attrs)	throws IOException {
+						public FileVisitResult visitFile(Path f, BasicFileAttributes attrs) throws IOException {
 							if (attrs.isDirectory() || f.getNameCount() < 3) {
 								return FileVisitResult.CONTINUE;
 							}
@@ -137,7 +148,8 @@ class JrtReleaseClasses {
 								if (content == null) {
 									return FileVisitResult.CONTINUE;
 								}
-								ClasspathJrt.acceptModule(key, content, f.getParent().getFileName().toString(), newCache);
+								ClasspathJrt.acceptModule(key, content, f.getParent().getFileName().toString(),
+										newCache);
 							}
 							return FileVisitResult.SKIP_SIBLINGS;
 						}
@@ -151,7 +163,7 @@ class JrtReleaseClasses {
 	}
 
 	boolean hasModule() {
-		return  this.fs == null ? true : this.modPathString != null;
+		return this.fs == null ? true : this.modPathString != null;
 	}
 
 	String getKey() {
