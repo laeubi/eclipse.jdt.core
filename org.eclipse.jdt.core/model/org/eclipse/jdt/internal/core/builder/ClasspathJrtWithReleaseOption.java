@@ -14,9 +14,6 @@
 package org.eclipse.jdt.internal.core.builder;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
 import java.util.function.Predicate;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -85,14 +82,6 @@ public class ClasspathJrtWithReleaseOption extends ClasspathJrt {
 		} catch (IOException | ClassFormatException e) { // handle like class not found
 			return null;
 		}
-	}
-
-	@Override
-	public Collection<String> getModuleNames(Collection<String> limitModules) {
-		Set<String> cache = ClasspathJrt.getModuleNames(this);
-		if (cache != null)
-			return selectModules(cache, limitModules);
-		return Collections.emptyList();
 	}
 
 	@Override

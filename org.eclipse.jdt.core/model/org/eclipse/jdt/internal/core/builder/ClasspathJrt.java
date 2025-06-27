@@ -72,20 +72,6 @@ public ClasspathJrt(String zipFilename, AccessRuleSet accessRuleSet, IPath exter
 	loadModules(this);
 }
 
-static Set<String> getModuleNames(final ClasspathJrt jrt) {
-	if (jrt.zipFilename == null) {
-		return Set.of();
-	}
-	if (modulesCache.isEmpty()) {
-		return null;
-	}
-	Map<String, IModule> modules = modulesCache.get(jrt.getKey());
-	if (modules != null) {
-		return modules.keySet();
-	}
-	return null;
-}
-
 public static void loadModules(final ClasspathJrt jrt) {
 	String jrtKey = jrt.getKey();
 	if (jrtKey == null) {
@@ -246,13 +232,20 @@ public IModule getModule(String moduleName) {
 }
 @Override
 public Collection<String> getModuleNames(Collection<String> limitModules) {
-	Set<String> cache = getModuleNames(this);
-	if (cache != null)
-		return selectModules(cache, limitModules);
+	if (this.zipFilename == null) {
+		return Collections.emptyList();
+	}
+	if (modulesCache.isEmpty()) {
+		return Collections.emptyList();
+	}
+	Map<String, IModule> modules = modulesCache.get(getKey());
+	if (modules != null) {
+		return selectModules(modules.keySet(), limitModules);
+	}
 	return Collections.emptyList();
 }
 
-protected Collection<String> selectModules(Set<String> keySet, Collection<String> limitModules) {
+private Collection<String> selectModules(Set<String> keySet, Collection<String> limitModules) {
 	Collection<String> rootModules;
 	if (limitModules == NO_LIMIT_MODULES) {
 		rootModules = new HashSet<>(keySet);
