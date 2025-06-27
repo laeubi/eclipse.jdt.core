@@ -206,8 +206,10 @@ public class MultiReleaseTests extends BuilderTests {
 				"""
 		);
 		fullBuild();
-		expectingOnlySpecificProblemFor(src9, new Problem("", "The method of(URI, null) is undefined for the type URL", src9.append("p/NotInThisRelease.java"), 281, 283, 50, IMarker.SEVERITY_ERROR, "JDT"));
+		Problem java9problem = new Problem("", "The method of(URI, null) is undefined for the type URL", src9.append("p/NotInThisRelease.java"), 281, 283, 50, IMarker.SEVERITY_ERROR, "JDT");
+		expectingOnlySpecificProblemFor(src9, java9problem);
 		expectingNoProblemsFor(src21);
+		expectingOnlySpecificProblemsFor(projectPath, new Problem[] {java9problem, new Problem("", "Multi-Release Compilation requires the target option enabled in the project settings", projectPath, 0, 1, -1, IMarker.SEVERITY_ERROR, "JDT")});
 	}
 
 	public void testMultiReleaseCompileWithConflict() throws JavaModelException, IOException {
@@ -258,6 +260,7 @@ public class MultiReleaseTests extends BuilderTests {
 	private IPath whenSetupMRRpoject(String compliance) throws JavaModelException {
 		IPath projectPath = env.addProject("P", compliance);
 		env.removePackageFragmentRoot(projectPath, "");
+		env.setProjectOption(projectPath, "org.eclipse.jdt.core.compiler.release", "enabled");
 		IPath defaultSrc = env.addPackageFragmentRoot(projectPath, DEFAULT_SRC_FOLDER);
 		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
 				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
