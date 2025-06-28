@@ -75,11 +75,11 @@ private final CompilationGroup compilationGroup;
 /** Tasks resulting from add-reads or add-exports classpath attributes. */
 ModuleUpdater moduleUpdater;
 
-NameEnvironment(IWorkspaceRoot root, JavaProject javaProject, Map<IProject, ClasspathLocation[]> binaryLocationsPerProject, BuildNotifier notifier, CompilationGroup compilationGroup) throws CoreException {
+NameEnvironment(IWorkspaceRoot root, JavaProject javaProject, Map<IProject, ClasspathLocation[]> binaryLocationsPerProject, BuildNotifier notifier, CompilationGroup compilationGroup, int release) throws CoreException {
 	this.compilationGroup = compilationGroup;
 	this.isIncrementalBuild = false;
 	this.notifier = notifier;
-	computeClasspathLocations(root, javaProject, binaryLocationsPerProject);
+	computeClasspathLocations(root, javaProject, binaryLocationsPerProject, release);
 	setNames(null, null);
 }
 
@@ -87,7 +87,7 @@ public NameEnvironment(IJavaProject javaProject, CompilationGroup compilationGro
 	this.isIncrementalBuild = false;
 	this.compilationGroup = compilationGroup;
 	try {
-		computeClasspathLocations(javaProject.getProject().getWorkspace().getRoot(), (JavaProject) javaProject, null);
+		computeClasspathLocations(javaProject.getProject().getWorkspace().getRoot(), (JavaProject) javaProject, null, IReleaseAwareNameEnvironment.NO_RELEASE);
 	} catch(CoreException e) {
 		this.sourceLocations = new ClasspathMultiDirectory[0];
 		this.binaryLocations = new ClasspathLocation[0];
@@ -120,7 +120,7 @@ public NameEnvironment(IJavaProject javaProject, CompilationGroup compilationGro
 private void computeClasspathLocations(
 	IWorkspaceRoot root,
 	JavaProject javaProject,
-	Map<IProject, ClasspathLocation[]> binaryLocationsPerProject) throws CoreException {
+	Map<IProject, ClasspathLocation[]> binaryLocationsPerProject, int releaseTarget) throws CoreException {
 
 	/* Update cycle marker */
 	IMarker cycleMarker = javaProject.getCycleMarker();
@@ -137,7 +137,16 @@ private void computeClasspathLocations(
 	ArrayList<ClasspathLocation> bLocations = new ArrayList<>(classpathEntries.length);
 	ArrayList<ClasspathLocation> sLocationsForTest = new ArrayList<>(classpathEntries.length);
 	Map<String, IModulePathEntry> moduleEntries = null;
-	String compliance = javaProject.getOption(JavaCore.COMPILER_COMPLIANCE, true);
+	String compliance;
+	boolean isReleaseEnabled;
+	if (releaseTarget > NO_RELEASE) {
+		//if specific release target is given this overrides the project compliance and implicitly requires release option
+		compliance = Integer.toString(releaseTarget);
+		isReleaseEnabled = true;
+	} else {
+		compliance = javaProject.getOption(JavaCore.COMPILER_COMPLIANCE, true);
+		isReleaseEnabled = JavaCore.ENABLED.equals(javaProject.getOption(JavaCore.COMPILER_RELEASE, false));
+	}
 	if (CompilerOptions.versionToJdkLevel(compliance) >= ClassFileConstants.JDK9) {
 		moduleEntries = new LinkedHashMap<>(classpathEntries.length);
 		this.moduleUpdater = new ModuleUpdater(javaProject);
@@ -205,6 +214,7 @@ private void computeClasspathLocations(
 					} else {
 						finalOutputFolder = outputFolder.getFolder(new Path(String.format("META-INF/versions/%s", release))); //$NON-NLS-1$
 					}
+					//TODO if filter for given releaseTarget!
 					ClasspathLocation sourceLocation = ClasspathLocation.forSourceFolder(
 								(IContainer) target,
 								finalOutputFolder,
@@ -355,7 +365,7 @@ private void computeClasspathLocations(
 							&& JavaCore.IGNORE.equals(javaProject.getOption(JavaCore.COMPILER_PB_DISCOURAGED_REFERENCE, true)))
 								? null
 								: entry.getAccessRuleSet();
-					String release = JavaCore.ENABLED.equals(javaProject.getOption(JavaCore.COMPILER_RELEASE, false)) ? compliance : null;
+					String release = isReleaseEnabled ? compliance : null;
 					ClasspathLocation bLocation = null;
 					String libPath = path.toOSString();
 					if (Util.isJrt(libPath)) {
@@ -578,6 +588,7 @@ private NameEnvironmentAnswer findClass(String qualifiedTypeName, char[] typeNam
 
 	ClasspathLocation[] relevantLocations;
 	if (moduleName != null && this.modulePathEntries != null) {
+		//FIXME modulePathEntries must be per release!
 		IModulePathEntry modulePathEntry = this.modulePathEntries.get(moduleName);
 		if (modulePathEntry instanceof ModulePathEntry) {
 			relevantLocations = ((ModulePathEntry) modulePathEntry).getClasspathLocations();

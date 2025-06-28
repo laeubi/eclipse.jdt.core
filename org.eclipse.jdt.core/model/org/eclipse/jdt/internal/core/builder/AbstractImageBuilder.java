@@ -63,6 +63,7 @@ import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
 import org.eclipse.jdt.internal.compiler.ICompilerFactory;
 import org.eclipse.jdt.internal.compiler.ICompilerRequestor;
 import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
+import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
 import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.lookup.AnnotationBinding;
@@ -443,6 +444,7 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 			long oldCompliance = this.compiler.options.complianceLevel;
 			long oldSource = this.compiler.options.sourceLevel;
 			boolean oldRelease = this.compiler.options.release;
+			INameEnvironment oldEnv = this.compiler.lookupEnvironment.nameEnvironment;
 			try {
 				int release = entry.getKey();
 				if (release >= IReleaseAwareNameEnvironment.FIRST_MULTI_RELEASE) {
@@ -451,6 +453,7 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 					this.compiler.options.complianceLevel = currentTarget;
 					this.compiler.options.sourceLevel = currentTarget;
 					this.compiler.options.release = true;
+					this.compiler.lookupEnvironment.nameEnvironment = this.javaBuilder.getNameEnvironment(release);
 					if (oldTarget >= currentTarget) {
 						List<IContainer> list = entry.getValue().stream().map(sf -> sf.sourceLocation.sourceFolder)
 								.distinct().toList();
@@ -483,6 +486,7 @@ protected void compile(SourceFile[] units, SourceFile[] additionalUnits, boolean
 				this.compiler.options.complianceLevel = oldCompliance;
 				this.compiler.options.sourceLevel = oldSource;
 				this.compiler.options.release = oldRelease;
+				this.compiler.lookupEnvironment.nameEnvironment = oldEnv;
 			}
 		}
 	} catch (AbortCompilation ignored) {

@@ -47,6 +47,8 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.core.compiler.CompilationParticipant;
+import org.eclipse.jdt.internal.compiler.env.INameEnvironment;
+import org.eclipse.jdt.internal.compiler.env.IReleaseAwareNameEnvironment;
 import org.eclipse.jdt.internal.core.ClasspathEntry;
 import org.eclipse.jdt.internal.core.ClasspathValidation;
 import org.eclipse.jdt.internal.core.CompilationGroup;
@@ -684,8 +686,8 @@ private int initializeBuilder(int kind, boolean forBuild) throws CoreException {
 	}
 
 	this.binaryLocationsPerProject = new HashMap<>(3);
-	this.nameEnvironment = new NameEnvironment(this.workspaceRoot, this.javaProject, this.binaryLocationsPerProject, this.notifier, CompilationGroup.MAIN);
-	this.testNameEnvironment = new NameEnvironment(this.workspaceRoot, this.javaProject, this.binaryLocationsPerProject, this.notifier, CompilationGroup.TEST);
+	this.nameEnvironment = new NameEnvironment(this.workspaceRoot, this.javaProject, this.binaryLocationsPerProject, this.notifier, CompilationGroup.MAIN, IReleaseAwareNameEnvironment.NO_RELEASE);
+	this.testNameEnvironment = new NameEnvironment(this.workspaceRoot, this.javaProject, this.binaryLocationsPerProject, this.notifier, CompilationGroup.TEST, IReleaseAwareNameEnvironment.NO_RELEASE);
 
 	if (forBuild) {
 		String filterSequence = this.javaProject.getOption(JavaCore.CORE_JAVA_BUILD_RESOURCE_COPY_FILTER, true);
@@ -713,6 +715,16 @@ private int initializeBuilder(int kind, boolean forBuild) throws CoreException {
 		}
 	}
 	return kind;
+}
+
+public INameEnvironment getNameEnvironment(int release) {
+	// TODO caching, cleanup ...
+	try {
+		return new NameEnvironment(this.workspaceRoot, this.javaProject, this.binaryLocationsPerProject, this.notifier, CompilationGroup.MAIN, release);
+	} catch (CoreException e) {
+		//TODO better handle this with error in image builder
+		return this.nameEnvironment;
+	}
 }
 
 private boolean isClasspathBroken(JavaProject jProj, boolean tryRepair) throws CoreException {
@@ -867,4 +879,5 @@ public String toString() {
 		? "JavaBuilder for unknown project" //$NON-NLS-1$
 		: "JavaBuilder for " + this.currentProject.getName(); //$NON-NLS-1$
 }
+
 }
