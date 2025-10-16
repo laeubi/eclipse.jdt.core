@@ -29,6 +29,7 @@ import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
 import org.eclipse.jdt.internal.compiler.parser.Parser;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
 import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
+import org.eclipse.jdt.internal.core.JavaModelManager;
 import org.eclipse.jdt.internal.core.JavaProject;
 import org.eclipse.jdt.internal.core.ModuleDescriptionInfo;
 import org.eclipse.jdt.internal.core.util.Util;
@@ -206,7 +207,11 @@ IModule initializeModuleFromSource() {
 			}
 		}
 	} catch (Exception e) {
-		// Log and continue - no module found
+		// Log and continue - no module found or parsing failed
+		// This is not a critical error as the source folder may legitimately not have a module-info.java
+		if (JavaModelManager.VERBOSE) {
+			JavaModelManager.trace("Failed to parse module-info.java from " + this.sourceFolder.getFullPath(), e); //$NON-NLS-1$
+		}
 	}
 	return null;
 }
