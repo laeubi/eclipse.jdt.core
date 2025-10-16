@@ -395,6 +395,103 @@ public class MultiReleaseTests extends BuilderTests {
 		assertTrue("Expected org.w3c.dom error in base src", hasBaseOrgW3cError);
 		assertTrue("Expected org.w3c.dom error in src17 (no java.xml required)", hasSrc17OrgW3cError);
 		assertTrue("Expected java.awt error in src21 (no java.desktop required)", hasSrc21JavaAwtError);
+		
+		// Test incremental build - modify a file and verify errors persist correctly
+		env.addClass(src17, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w17;
+					org.w3c.dom.Element element17;
+					// Adding a comment to trigger incremental build
+				}
+				"""
+		);
+		incrementalBuild(projectPath);
+		
+		// After incremental build, src17 should still have error for org.w3c.dom but not java.awt
+		expectedProblems = getProblemsFor(projectPath);
+		boolean foundSrc17OrgW3cErrorAfterIncremental = false;
+		for (Problem p : expectedProblems) {
+			String path = p.getResourcePath();
+			String message = p.getMessage();
+			if (path.contains("src17")) {
+				if (message.contains("org.w3c.dom")) foundSrc17OrgW3cErrorAfterIncremental = true;
+				assertFalse("Unexpected java.awt error in src17 after incremental build", 
+						message.contains("java.awt"));
+			}
+		}
+		assertTrue("Expected org.w3c.dom error in src17 after incremental build", foundSrc17OrgW3cErrorAfterIncremental);
+	}
+
+	/**
+	 * Test that modifying module-info.java in a release-specific source folder
+	 * correctly updates the module dependencies for that folder.
+	 */
+	public void testMultiReleaseModuleInfoModification() throws JavaModelException, IOException {
+		// Create modular project with Java 11 as base
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_11);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		
+		// Base module-info requires no extra modules
+		env.addClass(defaultSrc, "", "module-info",
+				"""
+				module MRmodular {
+				}
+				"""
+		);
+		
+		// Java 17 source initially WITHOUT java.desktop requirement
+		IClasspathAttribute[] attributes17 = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "17") };
+		IPath src17 = env.addPackageFragmentRoot(projectPath, "src17", attributes17);
+		env.addClass(src17, "", "module-info",
+				"""
+				module MRmodular {
+				}
+				"""
+		);
+		env.addClass(src17, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w17;
+				}
+				"""
+		);
+		
+		fullBuild();
+		
+		// Should have error for java.awt initially
+		Problem[] problems = getProblemsFor(projectPath);
+		boolean hasInitialError = false;
+		for (Problem p : problems) {
+			if (p.getResourcePath().contains("src17") && p.getMessage().contains("java.awt")) {
+				hasInitialError = true;
+				break;
+			}
+		}
+		assertTrue("Expected java.awt error in src17 before adding requires", hasInitialError);
+		
+		// Now modify module-info.java to require java.desktop
+		env.addClass(src17, "", "module-info",
+				"""
+				module MRmodular {
+					requires java.desktop;
+				}
+				"""
+		);
+		
+		incrementalBuild(projectPath);
+		
+		// Error should be gone now
+		problems = getProblemsFor(projectPath);
+		for (Problem p : problems) {
+			if (p.getResourcePath().contains("src17")) {
+				assertFalse("Unexpected java.awt error in src17 after adding requires java.desktop: " + p.getMessage(), 
+						p.getMessage().contains("java.awt"));
+			}
+		}
 	}
 
 	private IPath whenSetupMRRpoject() throws JavaModelException {
