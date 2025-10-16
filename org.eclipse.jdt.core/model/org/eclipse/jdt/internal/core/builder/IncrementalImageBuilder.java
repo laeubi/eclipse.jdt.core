@@ -167,6 +167,10 @@ public boolean build(Map<IProject, IResourceDelta> deltas) {
 		if (this.testImageBuilder != null && this.testImageBuilder.incrementalBuildLoop() == false) {
 			return false;
 		}
+		
+		// Validate Multi-Release API compatibility after all incremental compilation is complete
+		validateMultiReleaseApiCompatibility();
+		
 		if (this.hasStructuralChanges && this.javaBuilder.javaProject.hasCycleMarker())
 			this.javaBuilder.mustPropagateStructuralChanges();
 	} catch (AbortIncrementalBuildException e) {
@@ -1019,4 +1023,14 @@ static void dump(IResourceDelta delta) {
 		dump(children[i]);
 }
 */
+
+protected void validateMultiReleaseApiCompatibility() {
+	try {
+		MultiReleaseApiValidator validator = new MultiReleaseApiValidator(this);
+		validator.validateApiCompatibility();
+	} catch (CoreException e) {
+		Util.log(e, "Failed to validate Multi-Release API compatibility");
+	}
+}
+
 }

@@ -122,6 +122,9 @@ public void build() {
 					rebuildTypesAffectedBySecondaryTypes();
 			if (this.incrementalBuilder != null)
 				this.incrementalBuilder.buildAfterBatchBuild();
+			
+			// Validate Multi-Release API compatibility
+			validateMultiReleaseApiCompatibility();
 		}
 
 		if (this.javaBuilder.javaProject.hasCycleMarker())
@@ -139,6 +142,15 @@ public void build() {
 protected void acceptSecondaryType(ClassFile classFile) {
 	if (this.secondaryTypes != null)
 		this.secondaryTypes.add(classFile.fileName());
+}
+
+protected void validateMultiReleaseApiCompatibility() {
+	try {
+		MultiReleaseApiValidator validator = new MultiReleaseApiValidator(this);
+		validator.validateApiCompatibility();
+	} catch (CoreException e) {
+		Util.log(e, "Failed to validate Multi-Release API compatibility");
+	}
 }
 
 protected void cleanOutputFolders(boolean copyBack) throws CoreException {
