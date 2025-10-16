@@ -128,7 +128,11 @@ protected void codeComplete(
 		throw new JavaModelException(new JavaModelStatus(IJavaModelStatusConstants.INDEX_OUT_OF_BOUNDS));
 	}
 	JavaProject project = getJavaProject();
-	SearchableEnvironment environment = project.newSearchableNameEnvironment(owner, requestor.isTestCodeExcluded());
+	int release = JavaProject.NO_RELEASE;
+	if (this instanceof ICompilationUnit) {
+		release = JavaProject.getReleaseForCompilationUnit(project, (ICompilationUnit) this);
+	}
+	SearchableEnvironment environment = project.newSearchableNameEnvironment(owner, requestor.isTestCodeExcluded(), release);
 
 	// set unit to skip
 	environment.unitToSkip = unitToSkip;
@@ -154,7 +158,11 @@ protected IJavaElement[] codeSelect(org.eclipse.jdt.internal.compiler.env.ICompi
 	}
 
 	JavaProject project = getJavaProject();
-	SearchableEnvironment environment = project.newSearchableNameEnvironment(owner);
+	int release = JavaProject.NO_RELEASE;
+	if (this instanceof ICompilationUnit) {
+		release = JavaProject.getReleaseForCompilationUnit(project, (ICompilationUnit) this);
+	}
+	SearchableEnvironment environment = project.newSearchableNameEnvironment(owner, false, release);
 
 	SelectionRequestor requestor= new SelectionRequestor(environment.nameLookup, this);
 	IBuffer buffer = getBuffer();

@@ -2851,6 +2851,37 @@ public class JavaProject
 	}
 
 	/*
+	 * Returns a new search name environment for this project. This name environment first looks in the working copies
+	 * of the given owner.
+	 * The release parameter specifies the target release for multirelease lookup.
+	 */
+	public SearchableEnvironment newSearchableNameEnvironment(WorkingCopyOwner owner, boolean excludeTestCode, int release) throws JavaModelException {
+		return new SearchableEnvironment(this, owner, excludeTestCode, release);
+	}
+
+	/**
+	 * Determines the release version for a compilation unit based on its classpath entry.
+	 * Returns NO_RELEASE if no release is specified.
+	 */
+	public static int getReleaseForCompilationUnit(IJavaProject project, ICompilationUnit cu) {
+		try {
+			IClasspathEntry[] rawClasspath = project.getRawClasspath();
+			final IPath resourcePath = cu.getResource().getFullPath();
+			for (IClasspathEntry e : rawClasspath) {
+				if (e.getEntryKind() == IClasspathEntry.CPE_SOURCE && e.getPath().isPrefixOf(resourcePath)) {
+					String value = ClasspathEntry.getExtraAttribute(e, IClasspathAttribute.RELEASE);
+					if (value != null)
+						return Integer.parseInt(value);
+				}
+			}
+		} catch (JavaModelException | NumberFormatException e) {
+			Util.log(e, "Exception while determining the release value for compilation unit \"" + cu.getElementName() //$NON-NLS-1$
+					+ "\"."); //$NON-NLS-1$
+		}
+		return NO_RELEASE;
+	}
+
+	/*
 	 * Returns a PerProjectInfo that doesn't register classpath change
 	 * and that should be used as a temporary info.
 	 */
