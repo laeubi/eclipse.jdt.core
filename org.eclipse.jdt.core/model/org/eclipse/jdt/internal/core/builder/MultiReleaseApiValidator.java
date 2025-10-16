@@ -29,6 +29,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.compiler.CharOperation;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileReader;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFormatException;
@@ -152,6 +153,13 @@ public class MultiReleaseApiValidator {
 	private void validateCompatibility(String typeName, TypeVersion baseVersion, 
 			ApiSignature baseSignature, TypeVersion laterVersion, ApiSignature laterSignature) {
 		
+		// Find the source file for the later version
+		IFile sourceFile = findSourceFile(typeName, laterVersion.version);
+		if (sourceFile == null) {
+			// Can't find source file, report on class file
+			sourceFile = laterVersion.classFile;
+		}
+		
 		// Check for removed public methods
 		for (MethodSignature baseMethod : baseSignature.publicMethods) {
 			if (!laterSignature.publicMethods.contains(baseMethod)) {
@@ -159,7 +167,7 @@ public class MultiReleaseApiValidator {
 				String message = String.format(
 					"Multi-Release type '%s': public method '%s' from base version is missing in version %d",
 					typeName.replace('/', '.'), methodName, laterVersion.version);
-				reportProblem(laterVersion.classFile, message);
+				reportProblem(sourceFile, message);
 			}
 		}
 		
@@ -170,9 +178,24 @@ public class MultiReleaseApiValidator {
 				String message = String.format(
 					"Multi-Release type '%s': public field '%s' from base version is missing in version %d",
 					typeName.replace('/', '.'), fieldName, laterVersion.version);
-				reportProblem(laterVersion.classFile, message);
+				reportProblem(sourceFile, message);
 			}
 		}
+	}
+	
+	private IFile findSourceFile(String typeName, int version) {
+		// Try to find the source file that produced this class
+		for (ClasspathMultiDirectory sourceLocation : this.imageBuilder.sourceLocations) {
+			if (version == -1 || sourceLocation.release == version) {
+				// Construct the expected source file path
+				String javaFileName = typeName + ".java";
+				IFile sourceFile = sourceLocation.sourceFolder.getFile(new Path(javaFileName));
+				if (sourceFile != null && sourceFile.exists()) {
+					return sourceFile;
+				}
+			}
+		}
+		return null;
 	}
 	
 	private ApiSignature readApiSignature(TypeVersion version) {
@@ -226,7 +249,7 @@ public class MultiReleaseApiValidator {
 	
 	private void reportProblem(IFile resource, String message) {
 		try {
-			this.imageBuilder.createProblemFor(resource, null, message, "org.eclipse.jdt.core.compiler.problem.multiReleaseApiBreak");
+			this.imageBuilder.createProblemFor(resource, null, message, org.eclipse.jdt.core.JavaCore.ERROR);
 		} catch (CoreException e) {
 			// Log but continue
 		}
