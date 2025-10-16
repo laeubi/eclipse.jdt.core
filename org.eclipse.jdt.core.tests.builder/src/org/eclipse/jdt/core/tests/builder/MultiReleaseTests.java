@@ -355,46 +355,22 @@ public class MultiReleaseTests extends BuilderTests {
 		// - Java 17 (src17): element17 should have error (only java.desktop required), w17 should be OK
 		// - Java 21 (src21): w21 should have error (only java.xml required), element21 should be OK
 		
-		// Note: The key test is that each source folder uses its own module-info.java,
-		// so errors should be different for each release level
-		Problem[] expectedProblems = getProblemsFor(projectPath);
+		// Use expectingSpecificProblemsFor to verify errors per source folder
+		// Base source should have errors for both types
+		expectingSpecificProblemsFor(defaultSrc, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", defaultSrc.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR),
+			new Problem("", "org.w3c.dom cannot be resolved to a type", defaultSrc.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
 		
-		// We expect at least 3 errors total (2 in base, 1 in src17, 1 in src21)
-		// but the exact count depends on whether variables cause additional errors
-		assertTrue("Expected problems from module restrictions, but got: " + expectedProblems.length, 
-				expectedProblems.length >= 3);
+		// Java 17 source should only have error for org.w3c.dom (java.desktop is required)
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "org.w3c.dom cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
 		
-		// Verify that errors exist for the right files
-		boolean hasBaseJavaAwtError = false;
-		boolean hasBaseOrgW3cError = false;
-		boolean hasSrc17OrgW3cError = false;
-		boolean hasSrc21JavaAwtError = false;
-		
-		for (Problem p : expectedProblems) {
-			String path = p.getResourcePath();
-			String message = p.getMessage();
-			if (path.contains("src/p/Test.java") || path.endsWith("Test.java") && !path.contains("src17") && !path.contains("src21")) {
-				if (message.contains("java.awt")) hasBaseJavaAwtError = true;
-				if (message.contains("org.w3c.dom")) hasBaseOrgW3cError = true;
-			}
-			if (path.contains("src17")) {
-				if (message.contains("org.w3c.dom")) hasSrc17OrgW3cError = true;
-				// Should NOT have java.awt error in src17
-				assertFalse("Unexpected java.awt error in src17 which requires java.desktop", 
-						message.contains("java.awt"));
-			}
-			if (path.contains("src21")) {
-				if (message.contains("java.awt")) hasSrc21JavaAwtError = true;
-				// Should NOT have org.w3c.dom error in src21 which requires java.xml
-				assertFalse("Unexpected org.w3c.dom error in src21 which requires java.xml", 
-						message.contains("org.w3c.dom"));
-			}
-		}
-		
-		assertTrue("Expected java.awt error in base src", hasBaseJavaAwtError);
-		assertTrue("Expected org.w3c.dom error in base src", hasBaseOrgW3cError);
-		assertTrue("Expected org.w3c.dom error in src17 (no java.xml required)", hasSrc17OrgW3cError);
-		assertTrue("Expected java.awt error in src21 (no java.desktop required)", hasSrc21JavaAwtError);
+		// Java 21 source should only have error for java.awt (java.xml is required)
+		expectingSpecificProblemsFor(src21, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", src21.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
 		
 		// Test incremental build - modify a file and verify errors persist correctly
 		env.addClass(src17, "p", "Test",
@@ -410,18 +386,9 @@ public class MultiReleaseTests extends BuilderTests {
 		incrementalBuild(projectPath);
 		
 		// After incremental build, src17 should still have error for org.w3c.dom but not java.awt
-		expectedProblems = getProblemsFor(projectPath);
-		boolean foundSrc17OrgW3cErrorAfterIncremental = false;
-		for (Problem p : expectedProblems) {
-			String path = p.getResourcePath();
-			String message = p.getMessage();
-			if (path.contains("src17")) {
-				if (message.contains("org.w3c.dom")) foundSrc17OrgW3cErrorAfterIncremental = true;
-				assertFalse("Unexpected java.awt error in src17 after incremental build", 
-						message.contains("java.awt"));
-			}
-		}
-		assertTrue("Expected org.w3c.dom error in src17 after incremental build", foundSrc17OrgW3cErrorAfterIncremental);
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "org.w3c.dom cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
 	}
 
 	/**
@@ -463,15 +430,9 @@ public class MultiReleaseTests extends BuilderTests {
 		fullBuild();
 		
 		// Should have error for java.awt initially
-		Problem[] problems = getProblemsFor(projectPath);
-		boolean hasInitialError = false;
-		for (Problem p : problems) {
-			if (p.getResourcePath().contains("src17") && p.getMessage().contains("java.awt")) {
-				hasInitialError = true;
-				break;
-			}
-		}
-		assertTrue("Expected java.awt error in src17 before adding requires", hasInitialError);
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
 		
 		// Now modify module-info.java to require java.desktop
 		env.addClass(src17, "", "module-info",
@@ -485,13 +446,7 @@ public class MultiReleaseTests extends BuilderTests {
 		incrementalBuild(projectPath);
 		
 		// Error should be gone now
-		problems = getProblemsFor(projectPath);
-		for (Problem p : problems) {
-			if (p.getResourcePath().contains("src17")) {
-				assertFalse("Unexpected java.awt error in src17 after adding requires java.desktop: " + p.getMessage(), 
-						p.getMessage().contains("java.awt"));
-			}
-		}
+		expectingNoProblemsFor(src17);
 	}
 
 	private IPath whenSetupMRRpoject() throws JavaModelException {
