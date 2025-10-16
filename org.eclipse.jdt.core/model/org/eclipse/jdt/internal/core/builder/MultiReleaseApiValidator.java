@@ -85,25 +85,13 @@ public class MultiReleaseApiValidator {
 		// Iterate through all source locations
 		for (ClasspathMultiDirectory sourceLocation : this.imageBuilder.sourceLocations) {
 			IContainer outputFolder = sourceLocation.binaryFolder;
+			int release = sourceLocation.release;
 			
-			// Check for default version (base) classes
-			collectTypesFromFolder(outputFolder, "", -1, typeVersions);
+			// Determine version: -1 for default (no release), or the release number
+			int version = (release >= org.eclipse.jdt.internal.core.JavaProject.FIRST_MULTI_RELEASE) ? release : -1;
 			
-			// Check for versioned classes in META-INF/versions/X/
-			IFolder metaInfFolder = outputFolder.getFolder(new Path("META-INF/versions"));
-			if (metaInfFolder.exists()) {
-				IResource[] versionFolders = metaInfFolder.members();
-				for (IResource versionResource : versionFolders) {
-					if (versionResource instanceof IFolder versionFolder) {
-						try {
-							int version = Integer.parseInt(versionFolder.getName());
-							collectTypesFromFolder(versionFolder, "", version, typeVersions);
-						} catch (NumberFormatException e) {
-							// Skip non-numeric folders
-						}
-					}
-				}
-			}
+			// Collect types from this output folder
+			collectTypesFromFolder(outputFolder, "", version, typeVersions);
 		}
 		
 		return typeVersions;
@@ -186,7 +174,9 @@ public class MultiReleaseApiValidator {
 	private IFile findSourceFile(String typeName, int version) {
 		// Try to find the source file that produced this class
 		for (ClasspathMultiDirectory sourceLocation : this.imageBuilder.sourceLocations) {
-			if (version == -1 || sourceLocation.release == version) {
+			int sourceRelease = sourceLocation.release >= org.eclipse.jdt.internal.core.JavaProject.FIRST_MULTI_RELEASE 
+					? sourceLocation.release : -1;
+			if (version == sourceRelease) {
 				// Construct the expected source file path
 				String javaFileName = typeName + ".java";
 				IFile sourceFile = sourceLocation.sourceFolder.getFile(new Path(javaFileName));
