@@ -403,44 +403,33 @@ private void computeClasspathLocations(
 				AbstractModule sourceModule = (AbstractModule)projectModule;
 				IModule info = (IModule) sourceModule.getElementInfo();
 				
-				// For multi-release compilation, separate source folders by release
-				// and initialize each one's module from its own module-info.java
-				ArrayList<ClasspathLocation> baseSourceLocations = new ArrayList<>();
-				boolean hasMultiRelease = false;
-				
+				// For multi-release compilation, initialize each source folder's module
+				// from its own module-info.java if it has a release attribute
 				for (ClasspathMultiDirectory sourceLocation : this.sourceLocations) {
 					if (sourceLocation.release != JavaProject.NO_RELEASE) {
-						hasMultiRelease = true;
 						// Initialize module from this source folder's own module-info.java
 						IModule releaseSpecificModule = sourceLocation.initializeModuleFromSource();
 						if (releaseSpecificModule != null) {
 							sourceLocation.setModule(releaseSpecificModule);
-						} else {
-							// Fall back to project module if no module-info.java found
-							sourceLocation.setModule(info);
 						}
-					} else {
-						baseSourceLocations.add(sourceLocation);
+						// If no module-info.java found, leave module null - ModulePathEntry.initializeModule() will set it
 					}
 				}
 				
-				// Add base source locations (without release) to the module path entry
+				// Add all source locations to the module path entry
 				final ClasspathLocation[] sourceLocations2;
 				if(sLocationsForTest.size() == 0) {
-					sourceLocations2 = baseSourceLocations.toArray(new ClasspathLocation[baseSourceLocations.size()]);
+					sourceLocations2 = this.sourceLocations;
 				} else {
-					ArrayList<ClasspathLocation> sourceLocationsForModulePathEntry=new ArrayList<>(baseSourceLocations.size()+sLocationsForTest.size());
-					sourceLocationsForModulePathEntry.addAll(baseSourceLocations);
+					ArrayList<ClasspathLocation> sourceLocationsForModulePathEntry=new ArrayList<>(sLocations.size()+sLocationsForTest.size());
+					sourceLocationsForModulePathEntry.addAll(sLocations);
 					sourceLocationsForModulePathEntry.addAll(sLocationsForTest);
 					sourceLocations2= sourceLocationsForModulePathEntry
 							.toArray(new ClasspathLocation[sourceLocationsForModulePathEntry.size()]);
 				}
-				
-				if (sourceLocations2.length > 0) {
-					ModulePathEntry projectEntry = new ModulePathEntry(javaProject.getPath(), info, sourceLocations2);
-					if (!moduleEntries.containsKey(sourceModule.getElementName())) { // can be registered already, if patching
-						moduleEntries.put(sourceModule.getElementName(), projectEntry);
-					}
+				ModulePathEntry projectEntry = new ModulePathEntry(javaProject.getPath(), info, sourceLocations2);
+				if (!moduleEntries.containsKey(sourceModule.getElementName())) { // can be registered already, if patching
+					moduleEntries.put(sourceModule.getElementName(), projectEntry);
 				}
 			} catch (JavaModelException jme) {
 				// do nothing, probably a non module project
