@@ -117,7 +117,9 @@ public class SearchableEnvironment
 		this.nameLookup = project.newNameLookup(workingCopies, excludeTestCode);
 		boolean java9plus = JavaCore.callReadOnly(() -> CompilerOptions
 				.versionToJdkLevel(project.getOption(JavaCore.COMPILER_COMPLIANCE, true)) >= ClassFileConstants.JDK9);
-		if (java9plus) {
+		// When a specific release is given and it's Java 9+, we need module support even if the project compliance is lower
+		boolean needsModuleSupport = java9plus || (release >= JavaProject.FIRST_MULTI_RELEASE);
+		if (needsModuleSupport) {
 			this.knownModuleLocations = new HashMap<>();
 
 			this.moduleUpdater = new ModuleUpdater(project);
