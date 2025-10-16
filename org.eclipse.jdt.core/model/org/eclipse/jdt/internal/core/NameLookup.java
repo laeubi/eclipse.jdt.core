@@ -953,8 +953,18 @@ public class NameLookup implements SuffixConstants {
 			}
 		}
 		try {
-			if (root.getKind() == IPackageFragmentRoot.K_SOURCE)
-				module = root.getJavaProject().getModuleDescription(); // from any root in this project
+			if (root.getKind() == IPackageFragmentRoot.K_SOURCE) {
+				// For multi-release source folders, check if this root has a release attribute
+				IClasspathEntry classpathEntry = rootToEntry.apply(root);
+				String releaseAttr = ClasspathEntry.getExtraAttribute(classpathEntry, IClasspathAttribute.RELEASE);
+				if (releaseAttr != null) {
+					// This source folder has a release attribute - get module from THIS root, not project
+					module = root.getModuleDescription();
+				} else {
+					// Base source folder without release - get module from project
+					module = root.getJavaProject().getModuleDescription(); // from any root in this project
+				}
+			}
 		} catch (JavaModelException e) {
 			cache.put(root, NO_MODULE);
 			return null;
