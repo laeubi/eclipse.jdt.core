@@ -203,6 +203,13 @@ IModule initializeModuleFromSource() {
 			if (parsedUnit.moduleDeclaration != null) {
 				// Convert AST ModuleDeclaration to IModule
 				ModuleDescriptionInfo moduleInfo = ModuleDescriptionInfo.createModule(parsedUnit.moduleDeclaration);
+				if (JavaModelManager.VERBOSE) {
+					System.out.println("Created module " + new String(moduleInfo.name()) + " from " + 
+							this.sourceFolder.getFullPath() + " with " + moduleInfo.requires().length + " requires");
+					for (int i = 0; i < moduleInfo.requires().length; i++) {
+						System.out.println("  requires: " + new String(moduleInfo.requires()[i].name()));
+					}
+				}
 				return moduleInfo;
 			}
 		}
