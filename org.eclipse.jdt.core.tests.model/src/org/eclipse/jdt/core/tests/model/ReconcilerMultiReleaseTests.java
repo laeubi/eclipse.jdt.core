@@ -145,6 +145,50 @@ public class ReconcilerMultiReleaseTests extends ModifyingResourceTests {
 		clearDeltas();
 	}
 
+	/**
+	 * Test that reconciliation works correctly with multi-release source folders
+	 * when the project compliance level is lower than the release level.
+	 * 
+	 * This test verifies the fix for issue #4399, where SearchableEnvironment
+	 * was only checking the project compliance level to determine if Java 9+
+	 * features (like module support) should be enabled. With the fix,
+	 * SearchableEnvironment now also considers the release attribute of the
+	 * source folder, so that release-specific folders with release >= 9 can
+	 * correctly use Java 9+ features even when the overall project compliance
+	 * is lower (e.g., 1.8).
+	 * 
+	 * This test uses a project with JCL18_LIB (implying Java 8 compliance)
+	 * but with source folders marked as release=9 and release=21. The test
+	 * verifies that code in the release=21 folder can correctly reference:
+	 * - Types from the base src folder (release-agnostic)
+	 * - Types and members from the release=9 folder (B.fieldA, class C)
+	 * - Types and members from the release=21 folder (B.fieldC, B.m())
+	 * 
+	 * @see https://github.com/eclipse-jdt/eclipse.jdt.core/issues/4399
+	 */
+	public void testReleaseSpecificReconciliation() throws CoreException, InterruptedException {
+		String contents = """
+				package p;
+				public class D {
+					void m(B b) {
+						// Verify type lookup works across release levels:
+						// - A is from src (base level)
+						// - B.fieldA is available from src9+ (release=9)
+						// - C is from src9 (release=9)
+						// - B.fieldC is available from src21+ (release=21)
+						// - B.m() is available from src21+ (release=21)
+						A a = b.fieldA;
+						C c = b.fieldC;
+						b.m();
+					}
+				}
+			""";
+		setWorkingCopyContents(contents);
+		this.workingCopy.reconcile(ICompilationUnit.NO_AST, false, false, null, null);
+		assertNoProblem(contents.toCharArray(), this.workingCopy);
+		clearDeltas();
+	}
+
 	void setWorkingCopyContents(String contents) throws JavaModelException {
 		this.workingCopy.getBuffer().setContents(contents);
 		this.problemRequestor.initialize(contents.toCharArray());
