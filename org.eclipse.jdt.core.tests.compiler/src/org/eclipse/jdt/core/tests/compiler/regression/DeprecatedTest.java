@@ -1001,6 +1001,76 @@ public void testJEP211_1() {
 			""";
 	runner.runWarningTest();
 }
+// Test for issue #4553 - calling deprecated method through inherited interface
+public void testInheritedInterfaceDeprecatedMethod() {
+	this.runNegativeTest(
+		new String[] {
+			"p1/BaseInterface.java",
+			"package p1;\n" +
+			"public interface BaseInterface {\n" +
+			"	/** @deprecated */\n" +
+			"	void deprecatedMethod();\n" +
+			"}\n",
+			
+			"p2/DerivedInterface.java",
+			"package p2;\n" +
+			"import p1.BaseInterface;\n" +
+			"public interface DerivedInterface extends BaseInterface {\n" +
+			"}\n",
+			
+			"p3/Caller.java",
+			"package p3;\n" +
+			"import p2.DerivedInterface;\n" +
+			"public class Caller {\n" +
+			"	void test(DerivedInterface obj) {\n" +
+			"		obj.deprecatedMethod(); // Should warn about deprecated method\n" +
+			"	}\n" +
+			"}\n"
+		},
+		"----------\n" +
+		"1. WARNING in p3\\Caller.java (at line 5)\n" +
+		"	obj.deprecatedMethod(); // Should warn about deprecated method\n" +
+		"	    ^^^^^^^^^^^^^^^^\n" +
+		"The method deprecatedMethod() from the type BaseInterface is deprecated\n" +
+		"----------\n"
+	);
+}
+// Test for issue #4553 - @SuppressWarnings should be necessary for deprecated method through inherited interface
+public void testInheritedInterfaceDeprecatedMethodWithSuppressWarnings() {
+	Map customOptions = new HashMap();
+	customOptions.put(CompilerOptions.OPTION_ReportDeprecation, CompilerOptions.WARNING);
+	customOptions.put(CompilerOptions.OPTION_ReportUnusedWarningToken, CompilerOptions.ERROR);
+	this.runNegativeTest(
+		new String[] {
+			"p1/BaseInterface.java",
+			"package p1;\n" +
+			"public interface BaseInterface {\n" +
+			"	/** @deprecated */\n" +
+			"	void deprecatedMethod();\n" +
+			"}\n",
+			
+			"p2/DerivedInterface.java",
+			"package p2;\n" +
+			"import p1.BaseInterface;\n" +
+			"public interface DerivedInterface extends BaseInterface {\n" +
+			"}\n",
+			
+			"p3/Caller.java",
+			"package p3;\n" +
+			"import p2.DerivedInterface;\n" +
+			"public class Caller {\n" +
+			"	@SuppressWarnings(\"deprecation\")\n" +
+			"	void test(DerivedInterface obj) {\n" +
+			"		obj.deprecatedMethod(); // SuppressWarnings should be necessary\n" +
+			"	}\n" +
+			"}\n"
+		},
+		null,
+		customOptions,
+		"", // Should compile without errors - SuppressWarnings is valid
+		JavacTestOptions.DEFAULT
+	);
+}
 public static Class testClass() {
 	return DeprecatedTest.class;
 }
