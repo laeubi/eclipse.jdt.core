@@ -547,12 +547,6 @@ public abstract class ASTNode implements TypeConstants, TypeIds {
 		// inside same unit - no report
 		if (scope.isDefinedInSameUnit(method.declaringClass)) return false;
 
-		// non explicit use and non explicitly deprecated - no report
-		if (!isExplicitUse &&
-				(method.modifiers & ClassFileConstants.AccDeprecated) == 0) {
-			return false;
-		}
-
 		// if context is deprecated, may avoid reporting
 		if (!scope.compilerOptions().reportDeprecationInsideDeprecatedCode && scope.isInsideDeprecatedCode()) return false;
 		return true;
