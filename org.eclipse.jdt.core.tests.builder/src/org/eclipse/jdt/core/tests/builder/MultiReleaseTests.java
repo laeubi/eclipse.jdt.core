@@ -276,6 +276,179 @@ public class MultiReleaseTests extends BuilderTests {
 		expectingNoProblems();
 	}
 
+	/**
+	 * Test multi-release compilation with different module-info.java per release.
+	 * This verifies that each source folder with a different release uses its own
+	 * module-info.java for compilation, not a shared module from the project.
+	 * See issue https://github.com/eclipse-jdt/eclipse.jdt.core/issues/4268
+	 */
+	public void testMultiReleaseModuleInfoPerRelease() throws JavaModelException, IOException {
+		// Create modular project with Java 11 as base
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_11);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		
+		// Base module-info requires no extra modules
+		env.addClass(defaultSrc, "", "module-info",
+				"""
+				module MRmodular {
+				}
+				"""
+		);
+		
+		// Base Test.java - should have errors for both java.desktop and java.xml types
+		env.addClass(defaultSrc, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w11;
+					org.w3c.dom.Element element11;
+				}
+				"""
+		);
+		
+		// Java 17 source with module-info requiring java.desktop
+		IClasspathAttribute[] attributes17 = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "17") };
+		IPath src17 = env.addPackageFragmentRoot(projectPath, "src17", attributes17);
+		env.addClass(src17, "", "module-info",
+				"""
+				module MRmodular {
+					requires java.desktop;
+				}
+				"""
+		);
+		env.addClass(src17, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w17;
+					org.w3c.dom.Element element17;
+				}
+				"""
+		);
+		
+		// Java 21 source with module-info requiring java.xml
+		IClasspathAttribute[] attributes21 = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "21") };
+		IPath src21 = env.addPackageFragmentRoot(projectPath, "src21", attributes21);
+		env.addClass(src21, "", "module-info",
+				"""
+				module MRmodular {
+					requires java.xml;
+				}
+				"""
+		);
+		env.addClass(src21, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w21;
+					org.w3c.dom.Element element21;
+				}
+				"""
+		);
+		
+		fullBuild();
+		
+		// Expected errors:
+		// - Base (src): both w11 and element11 should have errors (no requires)
+		// - Java 17 (src17): element17 should have error (only java.desktop required), w17 should be OK
+		// - Java 21 (src21): w21 should have error (only java.xml required), element21 should be OK
+		
+		// Use expectingSpecificProblemsFor to verify errors per source folder
+		// Base source should have errors for both types
+		expectingSpecificProblemsFor(defaultSrc, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", defaultSrc.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR),
+			new Problem("", "org.w3c.dom cannot be resolved to a type", defaultSrc.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
+		
+		// Java 17 source should only have error for org.w3c.dom (java.desktop is required)
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "org.w3c.dom cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
+		
+		// Java 21 source should only have error for java.awt (java.xml is required)
+		expectingSpecificProblemsFor(src21, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", src21.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
+		
+		// Test incremental build - modify a file and verify errors persist correctly
+		env.addClass(src17, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w17;
+					org.w3c.dom.Element element17;
+					// Adding a comment to trigger incremental build
+				}
+				"""
+		);
+		incrementalBuild(projectPath);
+		
+		// After incremental build, src17 should still have error for org.w3c.dom but not java.awt
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "org.w3c.dom cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
+	}
+
+	/**
+	 * Test that modifying module-info.java in a release-specific source folder
+	 * correctly updates the module dependencies for that folder.
+	 */
+	public void testMultiReleaseModuleInfoModification() throws JavaModelException, IOException {
+		// Create modular project with Java 11 as base
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_11);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		
+		// Base module-info requires no extra modules
+		env.addClass(defaultSrc, "", "module-info",
+				"""
+				module MRmodular {
+				}
+				"""
+		);
+		
+		// Java 17 source initially WITHOUT java.desktop requirement
+		IClasspathAttribute[] attributes17 = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "17") };
+		IPath src17 = env.addPackageFragmentRoot(projectPath, "src17", attributes17);
+		env.addClass(src17, "", "module-info",
+				"""
+				module MRmodular {
+				}
+				"""
+		);
+		env.addClass(src17, "p", "Test",
+				"""
+				package p;
+				public class Test {
+					java.awt.Window w17;
+				}
+				"""
+		);
+		
+		fullBuild();
+		
+		// Should have error for java.awt initially
+		expectingSpecificProblemsFor(src17, new Problem[] {
+			new Problem("", "java.awt cannot be resolved to a type", src17.append("p/Test.java"), -1, -1, -1, IMarker.SEVERITY_ERROR)
+		});
+		
+		// Now modify module-info.java to require java.desktop
+		env.addClass(src17, "", "module-info",
+				"""
+				module MRmodular {
+					requires java.desktop;
+				}
+				"""
+		);
+		
+		incrementalBuild(projectPath);
+		
+		// Error should be gone now
+		expectingNoProblemsFor(src17);
+	}
+
 	private IPath whenSetupMRRpoject() throws JavaModelException {
 		return whenSetupMRRpoject(CompilerOptions.VERSION_1_8);
 	}
