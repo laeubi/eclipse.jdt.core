@@ -340,4 +340,204 @@ public class MultiReleaseTests extends BuilderTests {
 		return reader.getMajorVersion();
 	}
 
+	// Tests for Multi-Release API contract validation
+
+	public void testMultiReleaseApiContractViolation_RemovedMethod() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_1_8);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
+		
+		// Base version has a public method sayHello()
+		env.addClass(defaultSrc, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello";
+					}
+				}
+				"""
+		);
+		
+		// Java 9 version removes the sayHello() method - this violates the API contract
+		env.addClass(release9Src, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					// sayHello() method removed - API contract violation!
+				}
+				"""
+		);
+		
+		fullBuild();
+		// Should have an error about the missing method
+		expectingSpecificProblemFor(release9Src, new Problem("", 
+			"Multi-Release type 'p.MRType': public method 'sayHello' from base version is missing in version 9", 
+			release9Src.append("p/MRType.java"), -1, -1, -1, IMarker.SEVERITY_ERROR));
+	}
+
+	public void testMultiReleaseApiContractViolation_ChangedMethodSignature() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_1_8);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
+		
+		// Base version has sayHello() with no parameters
+		env.addClass(defaultSrc, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello";
+					}
+				}
+				"""
+		);
+		
+		// Java 9 version changes signature to have a parameter - this violates the API contract
+		env.addClass(release9Src, "p", "MRType",
+				"""
+				package p;
+				import java.util.Locale;
+				public class MRType {
+					public String sayHello(Locale locale) {
+						return "Hello";
+					}
+				}
+				"""
+		);
+		
+		fullBuild();
+		// Should have an error about the missing method (original signature)
+		expectingSpecificProblemFor(release9Src, new Problem("", 
+			"Multi-Release type 'p.MRType': public method 'sayHello' from base version is missing in version 9", 
+			release9Src.append("p/MRType.java"), -1, -1, -1, IMarker.SEVERITY_ERROR));
+	}
+
+	public void testMultiReleaseApiContractValid_AddedMethod() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_1_8);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
+		
+		// Base version has sayHello()
+		env.addClass(defaultSrc, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello";
+					}
+				}
+				"""
+		);
+		
+		// Java 9 version keeps sayHello() and adds a new method - this is valid
+		env.addClass(release9Src, "p", "MRType",
+				"""
+				package p;
+				import java.util.Locale;
+				public class MRType {
+					public String sayHello() {
+						return "Hello";
+					}
+					public String sayHello(Locale locale) {
+						return "Hello from locale";
+					}
+				}
+				"""
+		);
+		
+		fullBuild();
+		expectingNoProblems();
+	}
+
+	public void testMultiReleaseApiContractViolation_RemovedField() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_1_8);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		IClasspathAttribute[] extraAttributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, extraAttributes);
+		
+		// Base version has a public field
+		env.addClass(defaultSrc, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String message = "Hello";
+				}
+				"""
+		);
+		
+		// Java 9 version removes the field - this violates the API contract
+		env.addClass(release9Src, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					// message field removed - API contract violation!
+				}
+				"""
+		);
+		
+		fullBuild();
+		// Should have an error about the missing field
+		expectingSpecificProblemFor(release9Src, new Problem("", 
+			"Multi-Release type 'p.MRType': public field 'message' from base version is missing in version 9", 
+			release9Src.append("p/MRType.java"), -1, -1, -1, IMarker.SEVERITY_ERROR));
+	}
+
+	public void testMultiReleaseApiContractValid_MultipleVersions() throws JavaModelException, IOException {
+		IPath projectPath = createMRProject(CompilerOptions.VERSION_1_8);
+		IPath defaultSrc = env.getPackageFragmentRootPath(projectPath, DEFAULT_SRC_FOLDER);
+		IClasspathAttribute[] java9Attributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_9) };
+		IPath release9Src = env.addPackageFragmentRoot(projectPath, JAVA9_SRC_FOLDER, java9Attributes);
+		IClasspathAttribute[] java11Attributes = new IClasspathAttribute[] {
+				JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, org.eclipse.jdt.core.JavaCore.VERSION_11) };
+		IPath release11Src = env.addPackageFragmentRoot(projectPath, "src11", java11Attributes);
+		
+		// Base version
+		env.addClass(defaultSrc, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello";
+					}
+				}
+				"""
+		);
+		
+		// Java 9 version maintains API
+		env.addClass(release9Src, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello from Java 9";
+					}
+				}
+				"""
+		);
+		
+		// Java 11 version also maintains API
+		env.addClass(release11Src, "p", "MRType",
+				"""
+				package p;
+				public class MRType {
+					public String sayHello() {
+						return "Hello from Java 11";
+					}
+				}
+				"""
+		);
+		
+		fullBuild();
+		expectingNoProblems();
+	}
+
 }
