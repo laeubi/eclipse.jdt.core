@@ -14,6 +14,7 @@ import org.eclipse.jdt.core.WorkingCopyOwner;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.internal.core.JavaModelManager;
 import org.eclipse.jdt.internal.core.search.indexing.IndexManager;
+import org.eclipse.jdt.core.tests.util.CompletionTestsRequestor2;
 
 public class ReconcilerMultiReleaseTests extends ModifyingResourceTests {
 
@@ -143,6 +144,31 @@ public class ReconcilerMultiReleaseTests extends ModifyingResourceTests {
 		this.workingCopy.reconcile(ICompilationUnit.NO_AST, false, false, null, null);
 		assertNoProblem(contents.toCharArray(), this.workingCopy);
 		clearDeltas();
+	}
+
+	public void testCodeCompletionJavaLangTypes() throws CoreException, InterruptedException {
+		// Test that code completion works for java.lang types in multirelease source folders
+		String contents = """
+				package p;
+				public class D {
+					void m() {
+						System.o
+					}
+				}
+			""";
+		setWorkingCopyContents(contents);
+		
+		// Perform code completion at "System.o"
+		String str = contents;
+		String completeBehind = "System.o";
+		int cursorLocation = str.indexOf(completeBehind) + completeBehind.length();
+		
+		CompletionTestsRequestor2 requestor = new CompletionTestsRequestor2();
+		this.workingCopy.codeComplete(cursorLocation, requestor, this.wcOwner);
+		
+		// Should find "out" field from System class
+		String results = requestor.getResults();
+		assertTrue("Should find System.out", results.contains("out[FIELD_REF]"));
 	}
 
 	void setWorkingCopyContents(String contents) throws JavaModelException {
