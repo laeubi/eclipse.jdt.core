@@ -16,22 +16,16 @@ package org.eclipse.jdt.core.tests;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import junit.framework.Test;
-import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.eclipse.jdt.core.tests.compiler.parser.ComplianceDiagnoseTest;
 import org.eclipse.jdt.core.tests.compiler.regression.SwitchExpressionsYieldTest;
 import org.eclipse.jdt.core.tests.dom.ASTConverter14Test;
-import org.eclipse.jdt.core.tests.dom.ConverterTestSetup;
 import org.eclipse.jdt.core.tests.model.JavaSearchBugs13Tests;
 import org.eclipse.jdt.core.tests.rewrite.describing.ASTRewritingTest;
 import org.eclipse.jdt.core.tests.util.AbstractCompilerTest;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class RunAllJava13Tests extends TestCase {
-
-	public RunAllJava13Tests(String name) {
-		super(name);
-	}
+public class RunAllJava13Tests {
 	public static Class[] getAllTestClasses() {
 		return new Class[] {
 			JavaSearchBugs13Tests.class,
@@ -86,9 +80,5 @@ public class RunAllJava13Tests extends TestCase {
 				e.printStackTrace();
 			}
 		}
-	}
-	protected void tearDown() throws Exception {
-		ConverterTestSetup.PROJECT_SETUP = false;
-		super.tearDown();
 	}
 }
