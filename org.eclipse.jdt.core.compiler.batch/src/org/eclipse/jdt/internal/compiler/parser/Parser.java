@@ -8256,7 +8256,7 @@ protected void consumeLambdaHeader() {
 		if (argument.isReceiver()) {
 			problemReporter().illegalThis(argument);
 		}
-		if (isParsingJava8Plus() && !JavaFeature.UNNAMMED_PATTERNS_AND_VARS.isSupported(this.options) && argument.name.length == 1 && argument.name[0] == '_')
+		if (!JavaFeature.UNNAMMED_PATTERNS_AND_VARS.isSupported(this.options) && argument.name.length == 1 && argument.name[0] == '_')
 			problemReporter().illegalUseOfUnderscoreAsAnIdentifier(argument.sourceStart, argument.sourceEnd, true, false); // true == lambdaParameter
 	}
 	LambdaExpression lexp = (LambdaExpression) this.astStack[this.astPtr];
@@ -12142,7 +12142,7 @@ public ASTNode[] parseClassBodyDeclarations(char[] source, int offset, int lengt
 	try {
 		this.diet = true;
 		this.dietInt = 0;
-		this.tolerateDefaultClassMethods = isParsingJava8Plus();
+		this.tolerateDefaultClassMethods = true;
 		parse();
 	} catch (AbortCompilation ex) {
 		this.lastAct = ERROR_ACTION;
@@ -12421,7 +12421,7 @@ protected void pushIdentifier(char [] identifier, long position) {
 			stackLength);
 	}
 	this.identifierLengthStack[this.identifierLengthPtr] = 1;
-	if (isParsingJava8Plus() && !JavaFeature.UNNAMMED_PATTERNS_AND_VARS.isSupported(this.options) && identifier.length == 1 && identifier[0] == '_' && !this.processingLambdaParameterList)
+	if (!JavaFeature.UNNAMMED_PATTERNS_AND_VARS.isSupported(this.options) && identifier.length == 1 && identifier[0] == '_' && !this.processingLambdaParameterList)
 		problemReporter().illegalUseOfUnderscoreAsAnIdentifier((int) (position >>> 32), (int) position, isParsingJava9Plus(), false);
 }
 protected void pushIdentifier() {
@@ -13296,10 +13296,6 @@ public boolean isParsingModuleDeclaration() {
 	return (isParsingJava9Plus() && this.compilationUnit != null && this.compilationUnit.isModuleInfo());
 }
 
-protected boolean isParsingJava8Plus() {
-	return true;
-}
-
 protected boolean isParsingJava9Plus() {
 	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK9;
 }
@@ -13308,32 +13304,12 @@ protected boolean isParsingJava10Plus() {
 	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK10;
 }
 
-protected boolean isParsingJava11Plus() {
-	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK11;
-}
-
 protected boolean isParsingJava14Plus() {
 	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK14;
 }
 
-protected boolean isParsingJava15Plus() {
-	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK15;
-}
-
 protected boolean isParsingJava17Plus() {
 	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK17;
-}
-
-protected boolean isParsingJava18Plus() {
-	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK18;
-}
-
-protected boolean isParsingJava21Plus() {
-	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK21;
-}
-
-protected boolean isParsingJava22Plus() {
-	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK22;
 }
 
 protected boolean isPreviewEnabled() {
