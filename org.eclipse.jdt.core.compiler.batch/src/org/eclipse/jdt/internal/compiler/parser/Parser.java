@@ -13299,36 +13299,46 @@ public boolean isParsingModuleDeclaration() {
 protected boolean isParsingJava8Plus() {
 	return true;
 }
+
 protected boolean isParsingJava9Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK9;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK9;
 }
+
 protected boolean isParsingJava10Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK10;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK10;
 }
+
 protected boolean isParsingJava11Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK11;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK11;
 }
+
 protected boolean isParsingJava14Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK14;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK14;
 }
+
 protected boolean isParsingJava15Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK15;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK15;
 }
+
 protected boolean isParsingJava17Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK17;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK17;
 }
+
 protected boolean isParsingJava18Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK18;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK18;
 }
+
 protected boolean isParsingJava21Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK21;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK21;
 }
+
 protected boolean isParsingJava22Plus() {
-	return this.options!=null && this.options.sourceLevel >= ClassFileConstants.JDK22;
+	return this.options != null && this.options.sourceLevel >= ClassFileConstants.JDK22;
 }
 
 protected boolean isPreviewEnabled() {
-	return this.options!=null && this.options.sourceLevel == ClassFileConstants.getLatestJDKLevel() && this.options.enablePreviewFeatures;
+	return this.options != null && this.options.sourceLevel == ClassFileConstants.getLatestJDKLevel()
+			&& this.options.enablePreviewFeatures;
 }
 }
 
