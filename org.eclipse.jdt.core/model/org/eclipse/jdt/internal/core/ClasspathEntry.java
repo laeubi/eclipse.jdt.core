@@ -244,6 +244,9 @@ public class ClasspathEntry implements IClasspathEntry {
 	 */
 	public IClasspathAttribute[] extraAttributes;
 
+	private final boolean isTest;
+	private final boolean isWithoutTestCode;
+
 	public ClasspathEntry(
 			int contentKind,
 			int entryKind,
@@ -325,6 +328,21 @@ public class ClasspathEntry implements IClasspathEntry {
 		this.combineAccessRules = combineAccessRules;
 		this.extraAttributes = extraAttributes.length > 0 ? extraAttributes : NO_EXTRA_ATTRIBUTES;
 
+		boolean test = false;
+		boolean withoutTestCode = false;
+		for (IClasspathAttribute attribute : this.extraAttributes) {
+			if (IClasspathAttribute.TEST.equals(attribute.getName()) && "true".equals(attribute.getValue())) { //$NON-NLS-1$
+				test = true;
+			} else if (IClasspathAttribute.WITHOUT_TEST_CODE.equals(attribute.getName()) && "true".equals(attribute.getValue())) { //$NON-NLS-1$
+				withoutTestCode = true;
+			}
+			if (test && withoutTestCode) {
+				break;
+			}
+		}
+		this.isTest = test;
+		this.isWithoutTestCode = withoutTestCode;
+
 	    if (inclusionPatterns != INCLUDE_ALL && inclusionPatterns.length > 0) {
 			this.fullInclusionPatternChars = UNINIT_PATTERNS;
 	    }
@@ -335,6 +353,16 @@ public class ClasspathEntry implements IClasspathEntry {
 		this.sourceAttachmentRootPath = sourceAttachmentRootPath;
 		this.specificOutputLocation = specificOutputLocation;
 		this.isExported = isExported;
+	}
+
+	@Override
+	public boolean isTest() {
+		return this.isTest;
+	}
+
+	@Override
+	public boolean isWithoutTestCode() {
+		return this.isWithoutTestCode;
 	}
 
 	@Override
