@@ -58,6 +58,7 @@ import org.eclipse.jdt.internal.core.AbstractModule;
 import org.eclipse.jdt.internal.core.ClasspathEntry;
 import org.eclipse.jdt.internal.core.CompilationGroup;
 import org.eclipse.jdt.internal.core.JavaModel;
+import org.eclipse.jdt.internal.core.JavaModelManager;
 import org.eclipse.jdt.internal.core.JavaProject;
 import org.eclipse.jdt.internal.core.ModuleUpdater;
 
@@ -402,6 +403,28 @@ private void computeClasspathLocations(
 			try {
 				AbstractModule sourceModule = (AbstractModule)projectModule;
 				IModule info = (IModule) sourceModule.getElementInfo();
+				
+				// For multi-release compilation, initialize each source folder's module
+				// from its own module-info.java if it has a release attribute
+				for (ClasspathMultiDirectory sourceLocation : this.sourceLocations) {
+					if (sourceLocation.release != JavaProject.NO_RELEASE) {
+						// Initialize module from this source folder's own module-info.java
+						IModule releaseSpecificModule = sourceLocation.initializeModuleFromSource();
+						if (releaseSpecificModule != null) {
+							sourceLocation.setModule(releaseSpecificModule);
+							if (JavaModelManager.VERBOSE) {
+								System.out.println("Set module " + new String(releaseSpecificModule.name()) + 
+										" for source folder " + sourceLocation.sourceFolder.getFullPath() + 
+										" (release=" + sourceLocation.release + ")");
+							}
+						}
+						// If no module-info.java found, leave module null - ModulePathEntry.initializeModule() will set it
+					}
+				}
+				
+				// Add all source locations to the module path entry
+				// Each location has its own module set (if it has a release attribute)
+				// The ModulePathEntry's module is only used as a fallback
 				final ClasspathLocation[] sourceLocations2;
 				if(sLocationsForTest.size() == 0) {
 					sourceLocations2 = this.sourceLocations;

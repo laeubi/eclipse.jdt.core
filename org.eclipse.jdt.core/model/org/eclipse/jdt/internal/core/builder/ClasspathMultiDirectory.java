@@ -14,11 +14,24 @@
 package org.eclipse.jdt.internal.core.builder;
 
 import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jdt.core.compiler.CharOperation;
+import org.eclipse.jdt.internal.compiler.CompilationResult;
+import org.eclipse.jdt.internal.compiler.DefaultErrorHandlingPolicies;
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.batch.FileSystem;
+import org.eclipse.jdt.internal.compiler.env.ICompilationUnit;
+import org.eclipse.jdt.internal.compiler.env.IModule;
+import org.eclipse.jdt.internal.compiler.impl.CompilerOptions;
+import org.eclipse.jdt.internal.compiler.parser.Parser;
+import org.eclipse.jdt.internal.compiler.problem.DefaultProblemFactory;
+import org.eclipse.jdt.internal.compiler.problem.ProblemReporter;
+import org.eclipse.jdt.internal.core.JavaModelManager;
 import org.eclipse.jdt.internal.core.JavaProject;
+import org.eclipse.jdt.internal.core.ModuleDescriptionInfo;
 import org.eclipse.jdt.internal.core.util.Util;
 
 public class ClasspathMultiDirectory extends ClasspathDirectory {
@@ -129,6 +142,85 @@ String[] directoryList(String qualifiedPackageName) {
 public String toString() {
 	return "Source classpath directory " + this.sourceFolder.getFullPath().toString() + //$NON-NLS-1$
 		" with " + super.toString(); //$NON-NLS-1$
+}
+
+/**
+ * Initialize module from module-info.java in the source folder.
+ * This is used for multi-release compilation where each source folder
+ * with a different release may have its own module-info.java.
+ */
+IModule initializeModuleFromSource() {
+	try {
+		IResource moduleInfoResource = this.sourceFolder.findMember("module-info.java"); //$NON-NLS-1$
+		if (moduleInfoResource instanceof IFile moduleInfoFile && moduleInfoFile.exists()) {
+			// Create a simple ICompilationUnit to read the file
+			ICompilationUnit sourceUnit = new ICompilationUnit() {
+				@Override
+				public char[] getContents() {
+					try {
+						return Util.getResourceContentsAsCharArray(moduleInfoFile);
+					} catch (CoreException e) {
+						return CharOperation.NO_CHAR;
+					}
+				}
+				@Override
+				public char[] getMainTypeName() {
+					return "module-info".toCharArray(); //$NON-NLS-1$
+				}
+				@Override
+				public char[][] getPackageName() {
+					return CharOperation.NO_CHAR_CHAR;
+				}
+				@Override
+				public char[] getFileName() {
+					return moduleInfoFile.getFullPath().toString().toCharArray();
+				}
+				@Override
+				public boolean ignoreOptionalProblems() {
+					return false;
+				}
+			};
+			
+			// Parse the module-info.java file
+			CompilerOptions compilerOptions = new CompilerOptions();
+			if (this.release != JavaProject.NO_RELEASE) {
+				compilerOptions.sourceLevel = CompilerOptions.versionToJdkLevel(Integer.toString(this.release));
+				compilerOptions.complianceLevel = compilerOptions.sourceLevel;
+				compilerOptions.targetJDK = compilerOptions.sourceLevel;
+			}
+			
+			ProblemReporter problemReporter = new ProblemReporter(
+				DefaultErrorHandlingPolicies.proceedWithAllProblems(),
+				compilerOptions,
+				new DefaultProblemFactory());
+			
+			Parser parser = new Parser(problemReporter, false);
+			parser.javadocParser.checkDocComment = false;
+			
+			CompilationResult compilationResult = new CompilationResult(sourceUnit, 0, 1, compilerOptions.maxProblemsPerUnit);
+			CompilationUnitDeclaration parsedUnit = parser.parse(sourceUnit, compilationResult);
+			
+			if (parsedUnit.moduleDeclaration != null) {
+				// Convert AST ModuleDeclaration to IModule
+				ModuleDescriptionInfo moduleInfo = ModuleDescriptionInfo.createModule(parsedUnit.moduleDeclaration);
+				if (JavaModelManager.VERBOSE) {
+					System.out.println("Created module " + new String(moduleInfo.name()) + " from " + 
+							this.sourceFolder.getFullPath() + " with " + moduleInfo.requires().length + " requires");
+					for (int i = 0; i < moduleInfo.requires().length; i++) {
+						System.out.println("  requires: " + new String(moduleInfo.requires()[i].name()));
+					}
+				}
+				return moduleInfo;
+			}
+		}
+	} catch (Exception e) {
+		// Log and continue - no module found or parsing failed
+		// This is not a critical error as the source folder may legitimately not have a module-info.java
+		if (JavaModelManager.VERBOSE) {
+			JavaModelManager.trace("Failed to parse module-info.java from " + this.sourceFolder.getFullPath(), e); //$NON-NLS-1$
+		}
+	}
+	return null;
 }
 
 }

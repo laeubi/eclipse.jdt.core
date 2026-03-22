@@ -90,7 +90,10 @@ public class ModulePathEntry implements IModulePathEntry {
 	// needed
 	private void initializeModule() {
 		for (ClasspathLocation location : this.locations) {
-			location.setModule(this.module);
+			// Don't overwrite module if already set (e.g., for multi-release source folders)
+			if (location.getModule() == null) {
+				location.setModule(this.module);
+			}
 		}
 	}
 	@Override
