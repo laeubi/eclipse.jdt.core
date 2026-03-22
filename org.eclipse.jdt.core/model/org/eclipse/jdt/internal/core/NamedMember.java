@@ -266,7 +266,12 @@ public abstract class NamedMember extends Member {
 	 */
 	public String[][] resolveType(String typeName, WorkingCopyOwner owner) throws JavaModelException {
 		JavaProject project = getJavaProject();
-		SearchableEnvironment environment = project.newSearchableNameEnvironment(owner);
+		int release = JavaProject.NO_RELEASE;
+		ICompilationUnit compilationUnit = getCompilationUnit();
+		if (compilationUnit != null) {
+			release = JavaProject.getReleaseForCompilationUnit(project, compilationUnit);
+		}
+		SearchableEnvironment environment = project.newSearchableNameEnvironment(owner, false, release);
 
 		class TypeResolveRequestor implements ISelectionRequestor {
 			String[][] answers = null;
